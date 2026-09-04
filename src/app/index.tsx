@@ -1,3 +1,4 @@
+import { router } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -28,7 +29,10 @@ export default function HomeScreen() {
             nights.
           </Text>
 
-          <Pressable style={styles.button}>
+          <Pressable
+            style={styles.button}
+            onPress={() => router.push("/login")}
+          >
             <Text style={styles.buttonText}>ENTER THE DOOR</Text>
           </Pressable>
         </View>

@@ -1,180 +1,258 @@
-import { Image } from 'expo-image';
-import { SymbolView } from 'expo-symbols';
-import { Platform, Pressable, ScrollView, StyleSheet } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { router } from "expo-router";
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import { ExternalLink } from '@/components/external-link';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Collapsible } from '@/components/ui/collapsible';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
+const categories = ["ALL", "COCKTAILS", "SPEAKEASIES", "ROOFTOPS"];
 
-export default function TabTwoScreen() {
-  const safeAreaInsets = useSafeAreaInsets();
-  const insets = {
-    ...safeAreaInsets,
-    bottom: safeAreaInsets.bottom + BottomTabInset + Spacing.three,
-  };
-  const theme = useTheme();
+const venues = [
+  {
+    name: "THE HIDDEN CHAPTER",
+    neighborhood: "WEST VILLAGE",
+    rating: "4.9",
+  },
+  {
+    name: "VELVET & SMOKE",
+    neighborhood: "SOHO",
+    rating: "4.8",
+  },
+  {
+    name: "THE MIDNIGHT ROOM",
+    neighborhood: "LOWER EAST SIDE",
+    rating: "4.9",
+  },
+];
 
-  const contentPlatformStyle = Platform.select({
-    android: {
-      paddingTop: insets.top,
-      paddingLeft: insets.left,
-      paddingRight: insets.right,
-      paddingBottom: insets.bottom,
-    },
-    web: {
-      paddingTop: Spacing.six,
-      paddingBottom: Spacing.four,
-    },
-  });
-
+export default function DiscoverScreen() {
   return (
-    <ScrollView
-      style={[styles.scrollView, { backgroundColor: theme.background }]}
-      contentInset={insets}
-      contentContainerStyle={[styles.contentContainer, contentPlatformStyle]}>
-      <ThemedView style={styles.container}>
-        <ThemedView style={styles.titleContainer}>
-          <ThemedText type="subtitle">Explore</ThemedText>
-          <ThemedText style={styles.centerText} themeColor="textSecondary">
-            This starter app includes example{'\n'}code to help you get started.
-          </ThemedText>
+    <SafeAreaView style={styles.container}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        <Text style={styles.eyebrow}>THE DOOR</Text>
 
-          <ExternalLink href="https://docs.expo.dev" asChild>
-            <Pressable style={({ pressed }) => pressed && styles.pressed}>
-              <ThemedView type="backgroundElement" style={styles.linkButton}>
-                <ThemedText type="link">Expo documentation</ThemedText>
-                <SymbolView
-                  tintColor={theme.text}
-                  name={{ ios: 'arrow.up.right.square', android: 'link', web: 'link' }}
-                  size={12}
-                />
-              </ThemedView>
+        <Text style={styles.title}>EXPLORE</Text>
+
+        <Text style={styles.subtitle}>Find what's behind the door.</Text>
+
+        <TextInput
+          style={styles.search}
+          placeholder="Search bars, cocktails, neighborhoods..."
+          placeholderTextColor="#77727C"
+        />
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.categories}
+        >
+          {categories.map((category, index) => (
+            <Pressable
+              key={category}
+              style={[styles.category, index === 0 && styles.categoryActive]}
+            >
+              <Text
+                style={[
+                  styles.categoryText,
+                  index === 0 && styles.categoryTextActive,
+                ]}
+              >
+                {category}
+              </Text>
             </Pressable>
-          </ExternalLink>
-        </ThemedView>
+          ))}
+        </ScrollView>
 
-        <ThemedView style={styles.sectionsWrapper}>
-          <Collapsible title="File-based routing">
-            <ThemedText type="small">
-              This app has two screens: <ThemedText type="code">src/app/index.tsx</ThemedText> and{' '}
-              <ThemedText type="code">src/app/explore.tsx</ThemedText>
-            </ThemedText>
-            <ThemedText type="small">
-              The layout file in <ThemedText type="code">src/app/_layout.tsx</ThemedText> sets up
-              the tab navigator.
-            </ThemedText>
-            <ExternalLink href="https://docs.expo.dev/router/introduction">
-              <ThemedText type="linkPrimary">Learn more</ThemedText>
-            </ExternalLink>
-          </Collapsible>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>TOP SPOTS</Text>
+          <Text style={styles.sectionLink}>VIEW ALL</Text>
+        </View>
 
-          <Collapsible title="Android, iOS, and web support">
-            <ThemedView type="backgroundElement" style={styles.collapsibleContent}>
-              <ThemedText type="small">
-                You can open this project on Android, iOS, and the web. To open the web version,
-                press <ThemedText type="smallBold">w</ThemedText> in the terminal running this
-                project.
-              </ThemedText>
-              <Image
-                source={require('@/assets/images/tutorial-web.png')}
-                style={styles.imageTutorial}
-              />
-            </ThemedView>
-          </Collapsible>
+        {venues.map((venue) => (
+          <Pressable
+            key={venue.name}
+            style={styles.venueCard}
+            onPress={() =>
+              venue.name === "THE HIDDEN CHAPTER" && router.push("/venue")
+            }
+          >
+            <View style={styles.imagePlaceholder}>
+              <Text style={styles.imageText}>THE DOOR</Text>
+            </View>
 
-          <Collapsible title="Images">
-            <ThemedText type="small">
-              For static images, you can use the <ThemedText type="code">@2x</ThemedText> and{' '}
-              <ThemedText type="code">@3x</ThemedText> suffixes to provide files for different
-              screen densities.
-            </ThemedText>
-            <Image source={require('@/assets/images/react-logo.png')} style={styles.imageReact} />
-            <ExternalLink href="https://reactnative.dev/docs/images">
-              <ThemedText type="linkPrimary">Learn more</ThemedText>
-            </ExternalLink>
-          </Collapsible>
+            <View style={styles.venueInfo}>
+              <View style={styles.venueMain}>
+                <Text style={styles.venueName}>{venue.name}</Text>
+                <Text style={styles.neighborhood}>{venue.neighborhood}</Text>
+              </View>
 
-          <Collapsible title="Light and dark mode components">
-            <ThemedText type="small">
-              This template has light and dark mode support. The{' '}
-              <ThemedText type="code">useColorScheme()</ThemedText> hook lets you inspect what the
-              user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
-            </ThemedText>
-            <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-              <ThemedText type="linkPrimary">Learn more</ThemedText>
-            </ExternalLink>
-          </Collapsible>
-
-          <Collapsible title="Animations">
-            <ThemedText type="small">
-              This template includes an example of an animated component. The{' '}
-              <ThemedText type="code">src/components/ui/collapsible.tsx</ThemedText> component uses
-              the powerful <ThemedText type="code">react-native-reanimated</ThemedText> library to
-              animate opening this hint.
-            </ThemedText>
-          </Collapsible>
-        </ThemedView>
-        {Platform.OS === 'web' && <WebBadge />}
-      </ThemedView>
-    </ScrollView>
+              <View style={styles.rating}>
+                <Text style={styles.star}>★</Text>
+                <Text style={styles.ratingText}>{venue.rating}</Text>
+              </View>
+            </View>
+          </Pressable>
+        ))}
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  scrollView: {
+  container: {
+    flex: 1,
+    backgroundColor: "#0B0A0F",
+  },
+
+  scrollContent: {
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 120,
+  },
+
+  eyebrow: {
+    color: "#C9A45C",
+    fontSize: 11,
+    letterSpacing: 3,
+    marginBottom: 14,
+  },
+
+  title: {
+    color: "#F5F1E8",
+    fontSize: 34,
+    fontWeight: "600",
+    letterSpacing: 2,
+  },
+
+  subtitle: {
+    color: "#96919B",
+    fontSize: 15,
+    marginTop: 10,
+  },
+
+  search: {
+    height: 52,
+    backgroundColor: "#17141C",
+    borderWidth: 1,
+    borderColor: "#29242F",
+    paddingHorizontal: 16,
+    color: "#F5F1E8",
+    marginTop: 28,
+    fontSize: 14,
+  },
+
+  categories: {
+    paddingVertical: 20,
+    gap: 10,
+  },
+
+  category: {
+    borderWidth: 1,
+    borderColor: "#29242F",
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+  },
+
+  categoryActive: {
+    borderColor: "#C9A45C",
+    backgroundColor: "#1A1710",
+  },
+
+  categoryText: {
+    color: "#77727C",
+    fontSize: 10,
+    letterSpacing: 1.2,
+  },
+
+  categoryTextActive: {
+    color: "#C9A45C",
+  },
+
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 10,
+    marginBottom: 14,
+  },
+
+  sectionTitle: {
+    color: "#F5F1E8",
+    fontSize: 12,
+    letterSpacing: 2,
+  },
+
+  sectionLink: {
+    color: "#C9A45C",
+    fontSize: 9,
+    letterSpacing: 1.5,
+  },
+
+  venueCard: {
+    backgroundColor: "#17141C",
+    borderWidth: 1,
+    borderColor: "#29242F",
+    marginBottom: 16,
+  },
+
+  imagePlaceholder: {
+    height: 170,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#211D27",
+  },
+
+  imageText: {
+    color: "#C9A45C",
+    fontSize: 10,
+    letterSpacing: 3,
+  },
+
+  venueInfo: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    padding: 16,
+  },
+
+  venueMain: {
     flex: 1,
   },
-  contentContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
+
+  venueName: {
+    color: "#F5F1E8",
+    fontSize: 14,
+    fontWeight: "600",
+    letterSpacing: 1,
   },
-  container: {
-    maxWidth: MaxContentWidth,
-    flexGrow: 1,
+
+  neighborhood: {
+    color: "#77727C",
+    fontSize: 9,
+    letterSpacing: 1.3,
+    marginTop: 6,
   },
-  titleContainer: {
-    gap: Spacing.three,
-    alignItems: 'center',
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.six,
+
+  rating: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginLeft: 12,
   },
-  centerText: {
-    textAlign: 'center',
+
+  star: {
+    color: "#C9A45C",
+    fontSize: 12,
   },
-  pressed: {
-    opacity: 0.7,
-  },
-  linkButton: {
-    flexDirection: 'row',
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.two,
-    borderRadius: Spacing.five,
-    justifyContent: 'center',
-    gap: Spacing.one,
-    alignItems: 'center',
-  },
-  sectionsWrapper: {
-    gap: Spacing.five,
-    paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.three,
-  },
-  collapsibleContent: {
-    alignItems: 'center',
-  },
-  imageTutorial: {
-    width: '100%',
-    aspectRatio: 296 / 171,
-    borderRadius: Spacing.three,
-    marginTop: Spacing.two,
-  },
-  imageReact: {
-    width: 100,
-    height: 100,
-    alignSelf: 'center',
+
+  ratingText: {
+    color: "#F5F1E8",
+    fontSize: 12,
+    marginLeft: 4,
   },
 });
