@@ -11,51 +11,91 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase } from "../../lib/supabase";
 
-export default function LoginScreen() {
+export default function SignupScreen() {
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function handleLogin() {
-    if (!email || !password) {
+  async function handleSignup() {
+    if (!name || !email || !password || !confirmPassword) {
+      Alert.alert("Missing information", "Please complete all fields.");
+      return;
+    }
+
+    if (password !== confirmPassword) {
       Alert.alert(
-        "Missing information",
-        "Please enter your email and password.",
+        "Passwords do not match",
+        "Please make sure both passwords are the same.",
+      );
+      return;
+    }
+
+    if (password.length < 6) {
+      Alert.alert(
+        "Password too short",
+        "Your password must be at least 6 characters.",
       );
       return;
     }
 
     setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { error } = await supabase.auth.signUp({
       email: email.trim(),
       password,
+      options: {
+        data: {
+          name: name.trim(),
+        },
+      },
     });
 
     setLoading(false);
 
     if (error) {
-      Alert.alert("Login failed", error.message);
+      Alert.alert("Sign up failed", error.message);
       return;
     }
 
-    router.replace("/home");
+    Alert.alert("Welcome to The Door", "Your account has been created.", [
+      {
+        text: "CONTINUE",
+        onPress: () => router.replace("/home"),
+      },
+    ]);
   }
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         <View>
+          <Pressable onPress={() => router.back()}>
+            <Text style={styles.back}>‹ BACK</Text>
+          </Pressable>
+
           <Text style={styles.brand}>THE DOOR</Text>
 
           <View style={styles.line} />
 
-          <Text style={styles.title}>Welcome back.</Text>
+          <Text style={styles.title}>Join us.</Text>
 
-          <Text style={styles.subtitle}>Enter your details to continue.</Text>
+          <Text style={styles.subtitle}>Create your account to enter.</Text>
         </View>
 
         <View style={styles.form}>
+          <Text style={styles.label}>NAME</Text>
+
+          <TextInput
+            style={styles.input}
+            placeholder="Your name"
+            placeholderTextColor="#77727C"
+            autoCapitalize="words"
+            value={name}
+            onChangeText={setName}
+          />
+
           <Text style={styles.label}>EMAIL</Text>
 
           <TextInput
@@ -80,26 +120,33 @@ export default function LoginScreen() {
             onChangeText={setPassword}
           />
 
-          <Pressable>
-            <Text style={styles.forgot}>Forgot password?</Text>
-          </Pressable>
+          <Text style={styles.label}>CONFIRM PASSWORD</Text>
+
+          <TextInput
+            style={styles.input}
+            placeholder="••••••••"
+            placeholderTextColor="#77727C"
+            secureTextEntry
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+          />
         </View>
 
         <View>
           <Pressable
             style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handleLogin}
+            onPress={handleSignup}
             disabled={loading}
           >
             <Text style={styles.buttonText}>
-              {loading ? "ENTERING..." : "ENTER"}
+              {loading ? "CREATING..." : "CREATE ACCOUNT"}
             </Text>
           </Pressable>
 
-          <Text style={styles.accountText}>Don't have an account?</Text>
-
-          <Pressable onPress={() => router.push("/signup")}>
-            <Text style={styles.signup}>CREATE AN ACCOUNT</Text>
+          <Pressable onPress={() => router.back()}>
+            <Text style={styles.loginText}>
+              ALREADY HAVE AN ACCOUNT? SIGN IN
+            </Text>
           </Pressable>
         </View>
       </View>
@@ -116,8 +163,15 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 24,
-    paddingVertical: 30,
+    paddingVertical: 25,
     justifyContent: "space-between",
+  },
+
+  back: {
+    color: "#C9A45C",
+    fontSize: 11,
+    letterSpacing: 2,
+    marginBottom: 28,
   },
 
   brand: {
@@ -131,7 +185,7 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: "#C9A45C",
     marginTop: 14,
-    marginBottom: 28,
+    marginBottom: 25,
   },
 
   title: {
@@ -147,19 +201,19 @@ const styles = StyleSheet.create({
   },
 
   form: {
-    marginTop: 30,
+    marginTop: 20,
   },
 
   label: {
     color: "#77727C",
     fontSize: 10,
     letterSpacing: 1.5,
-    marginBottom: 8,
-    marginTop: 18,
+    marginTop: 12,
+    marginBottom: 7,
   },
 
   input: {
-    height: 52,
+    height: 48,
     backgroundColor: "#17141C",
     borderWidth: 1,
     borderColor: "#29242F",
@@ -168,19 +222,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
 
-  forgot: {
-    color: "#C9A45C",
-    fontSize: 11,
-    marginTop: 12,
-    textAlign: "right",
-  },
-
   button: {
     height: 54,
     backgroundColor: "#C9A45C",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 30,
+    marginTop: 25,
   },
 
   buttonDisabled: {
@@ -191,21 +238,14 @@ const styles = StyleSheet.create({
     color: "#0B0A0F",
     fontSize: 11,
     fontWeight: "600",
-    letterSpacing: 2,
-  },
-
-  accountText: {
-    color: "#77727C",
-    fontSize: 12,
-    textAlign: "center",
-    marginTop: 20,
-  },
-
-  signup: {
-    color: "#C9A45C",
-    fontSize: 11,
     letterSpacing: 1.5,
+  },
+
+  loginText: {
+    color: "#C9A45C",
+    fontSize: 10,
+    letterSpacing: 1.2,
     textAlign: "center",
-    marginTop: 8,
+    marginTop: 18,
   },
 });
