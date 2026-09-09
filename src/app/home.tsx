@@ -1,13 +1,15 @@
 import { router } from "expo-router";
+import { useEffect, useState } from "react";
 import {
     Image,
     Pressable,
     ScrollView,
     StyleSheet,
     Text,
-    View,
+    View
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { supabase } from "../../lib/supabase";
 
 const COLORS = {
   background: "#0B0A0F",
@@ -37,6 +39,32 @@ const topSpots = [
 ];
 
 export default function HomeScreen() {
+  const [userName, setUserName] = useState("THERE");
+
+  useEffect(() => {
+    loadUser();
+  }, []);
+
+  async function loadUser() {
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
+
+    if (error) {
+      console.log("Error loading user:", error.message);
+      return;
+    }
+
+    const name = user?.user_metadata?.name;
+
+    if (name) {
+      setUserName(name.trim());
+    }
+  }
+
+  const firstLetter = userName.charAt(0).toUpperCase();
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
@@ -48,13 +76,18 @@ export default function HomeScreen() {
           <View>
             <Text style={styles.eyebrow}>GOOD EVENING</Text>
 
-            <Text style={styles.welcome}>WELCOME INSIDE, ALEX.</Text>
+            <Text style={styles.welcome}>
+              WELCOME INSIDE, {userName.toUpperCase()}.
+            </Text>
 
             <Text style={styles.location}>📍 New York City</Text>
           </View>
 
-          <Pressable style={styles.profileButton}>
-            <Text style={styles.profileText}>A</Text>
+          <Pressable
+            style={styles.profileButton}
+            onPress={() => router.push("/profile")}
+          >
+            <Text style={styles.profileText}>{firstLetter}</Text>
           </Pressable>
         </View>
 
@@ -132,13 +165,7 @@ export default function HomeScreen() {
           onPress={() => router.push("/explore")}
         />
 
-        <NavItem
-          icon="♡"
-          label="SAVED"
-          onPress={() => {
-            router.push("/saved");
-          }}
-        />
+        <NavItem icon="♡" label="SAVED" onPress={() => router.push("/saved")} />
 
         <NavItem
           icon="○"
@@ -206,7 +233,9 @@ function VenueCard({
 
         <View style={styles.venueMeta}>
           <Text style={styles.rating}>★ {rating}</Text>
+
           <Text style={styles.dot}>·</Text>
+
           <Text style={styles.metaText}>COCKTAIL BAR</Text>
         </View>
       </View>

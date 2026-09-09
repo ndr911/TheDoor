@@ -2,6 +2,8 @@ import { router } from "expo-router";
 import { useState } from "react";
 import {
     Alert,
+    KeyboardAvoidingView,
+    Platform,
     Pressable,
     StyleSheet,
     Text,
@@ -19,7 +21,7 @@ export default function SignupScreen() {
   const [loading, setLoading] = useState(false);
 
   async function handleSignup() {
-    if (!name || !email || !password || !confirmPassword) {
+    if (!name.trim() || !email.trim() || !password || !confirmPassword) {
       Alert.alert("Missing information", "Please complete all fields.");
       return;
     }
@@ -42,7 +44,10 @@ export default function SignupScreen() {
 
     setLoading(true);
 
-    const { error } = await supabase.auth.signUp({
+    const {
+      data: { session },
+      error,
+    } = await supabase.auth.signUp({
       email: email.trim(),
       password,
       options: {
@@ -59,97 +64,140 @@ export default function SignupScreen() {
       return;
     }
 
-    Alert.alert("Welcome to The Door", "Your account has been created.", [
-      {
-        text: "CONTINUE",
-        onPress: () => router.replace("/home"),
-      },
-    ]);
+    // Confirm Email is currently OFF in Supabase,
+    // so a successful signup should give us a session.
+    if (!session) {
+      Alert.alert(
+        "Account created",
+        "Your account was created, but no active session was returned. Please try logging in.",
+      );
+      return;
+    }
+
+    // User is authenticated — take them directly to Home.
+    router.replace("/home");
   }
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <View>
-          <Pressable onPress={() => router.back()}>
-            <Text style={styles.back}>‹ BACK</Text>
-          </Pressable>
+      <KeyboardAvoidingView
+        style={styles.keyboard}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <View style={styles.content}>
+          {/* Header */}
+          <View style={styles.header}>
+            <Pressable onPress={() => router.back()} style={styles.backButton}>
+              <Text style={styles.backText}>‹</Text>
+            </Pressable>
 
-          <Text style={styles.brand}>THE DOOR</Text>
+            <Text style={styles.brand}>THE DOOR</Text>
 
-          <View style={styles.line} />
+            <View style={styles.headerSpacer} />
+          </View>
 
-          <Text style={styles.title}>Join us.</Text>
+          {/* Intro */}
+          <View style={styles.intro}>
+            <Text style={styles.title}>Create your account.</Text>
 
-          <Text style={styles.subtitle}>Create your account to enter.</Text>
-        </View>
-
-        <View style={styles.form}>
-          <Text style={styles.label}>NAME</Text>
-
-          <TextInput
-            style={styles.input}
-            placeholder="Your name"
-            placeholderTextColor="#77727C"
-            autoCapitalize="words"
-            value={name}
-            onChangeText={setName}
-          />
-
-          <Text style={styles.label}>EMAIL</Text>
-
-          <TextInput
-            style={styles.input}
-            placeholder="you@email.com"
-            placeholderTextColor="#77727C"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-            value={email}
-            onChangeText={setEmail}
-          />
-
-          <Text style={styles.label}>PASSWORD</Text>
-
-          <TextInput
-            style={styles.input}
-            placeholder="••••••••"
-            placeholderTextColor="#77727C"
-            secureTextEntry
-            value={password}
-            onChangeText={setPassword}
-          />
-
-          <Text style={styles.label}>CONFIRM PASSWORD</Text>
-
-          <TextInput
-            style={styles.input}
-            placeholder="••••••••"
-            placeholderTextColor="#77727C"
-            secureTextEntry
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-          />
-        </View>
-
-        <View>
-          <Pressable
-            style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handleSignup}
-            disabled={loading}
-          >
-            <Text style={styles.buttonText}>
-              {loading ? "CREATING..." : "CREATE ACCOUNT"}
+            <Text style={styles.subtitle}>
+              Step inside and discover what&apos;s
+              {"\n"}
+              behind the door.
             </Text>
-          </Pressable>
+          </View>
 
-          <Pressable onPress={() => router.back()}>
-            <Text style={styles.loginText}>
-              ALREADY HAVE AN ACCOUNT? SIGN IN
-            </Text>
-          </Pressable>
+          {/* Form */}
+          <View style={styles.form}>
+            {/* Name */}
+            <View style={styles.field}>
+              <Text style={styles.label}>NAME</Text>
+
+              <TextInput
+                style={styles.input}
+                value={name}
+                onChangeText={setName}
+                placeholder="Your name"
+                placeholderTextColor="#66616B"
+                autoCapitalize="words"
+                autoCorrect={false}
+              />
+            </View>
+
+            {/* Email */}
+            <View style={styles.field}>
+              <Text style={styles.label}>EMAIL</Text>
+
+              <TextInput
+                style={styles.input}
+                value={email}
+                onChangeText={setEmail}
+                placeholder="you@example.com"
+                placeholderTextColor="#66616B"
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="email-address"
+              />
+            </View>
+
+            {/* Password */}
+            <View style={styles.field}>
+              <Text style={styles.label}>PASSWORD</Text>
+
+              <TextInput
+                style={styles.input}
+                value={password}
+                onChangeText={setPassword}
+                placeholder="Create a password"
+                placeholderTextColor="#66616B"
+                autoCapitalize="none"
+                autoCorrect={false}
+                secureTextEntry
+              />
+            </View>
+
+            {/* Confirm Password */}
+            <View style={styles.field}>
+              <Text style={styles.label}>CONFIRM PASSWORD</Text>
+
+              <TextInput
+                style={styles.input}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                placeholder="Confirm your password"
+                placeholderTextColor="#66616B"
+                autoCapitalize="none"
+                autoCorrect={false}
+                secureTextEntry
+              />
+            </View>
+          </View>
+
+          {/* Bottom */}
+          <View style={styles.bottom}>
+            <Pressable
+              style={[
+                styles.createButton,
+                loading && styles.createButtonDisabled,
+              ]}
+              onPress={handleSignup}
+              disabled={loading}
+            >
+              <Text style={styles.createButtonText}>
+                {loading ? "CREATING ACCOUNT..." : "CREATE ACCOUNT"}
+              </Text>
+            </Pressable>
+
+            <View style={styles.loginRow}>
+              <Text style={styles.loginPrompt}>ALREADY A MEMBER?</Text>
+
+              <Pressable onPress={() => router.replace("/login")}>
+                <Text style={styles.loginLink}>SIGN IN</Text>
+              </Pressable>
+            </View>
+          </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -160,92 +208,183 @@ const styles = StyleSheet.create({
     backgroundColor: "#0B0A0F",
   },
 
+  keyboard: {
+    flex: 1,
+  },
+
   content: {
     flex: 1,
-    paddingHorizontal: 24,
-    paddingVertical: 25,
+    paddingHorizontal: 28,
+    paddingTop: 18,
+    paddingBottom: 28,
+  },
+
+  // =========================
+  // HEADER
+  // =========================
+
+  header: {
+    height: 48,
+    flexDirection: "row",
+    alignItems: "center",
     justifyContent: "space-between",
   },
 
-  back: {
-    color: "#C9A45C",
-    fontSize: 11,
-    letterSpacing: 2,
-    marginBottom: 28,
+  backButton: {
+    width: 40,
+    height: 40,
+    justifyContent: "center",
+  },
+
+  backText: {
+    color: "#D6AA58",
+    fontSize: 36,
+    fontWeight: "300",
+    lineHeight: 40,
   },
 
   brand: {
-    color: "#C9A45C",
-    fontSize: 12,
-    letterSpacing: 3,
+    color: "#D6AA58",
+    fontSize: 24,
+    letterSpacing: 6,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
-  line: {
-    width: 45,
-    height: 1,
-    backgroundColor: "#C9A45C",
-    marginTop: 14,
-    marginBottom: 25,
+  headerSpacer: {
+    width: 40,
+  },
+
+  // =========================
+  // INTRO
+  // =========================
+
+  intro: {
+    marginTop: 38,
+    alignItems: "center",
   },
 
   title: {
     color: "#F5F1E8",
-    fontSize: 34,
-    fontWeight: "600",
+    fontSize: 38,
+    lineHeight: 42,
+    textAlign: "center",
+    fontFamily: "CormorantGaramond_500Medium",
   },
 
   subtitle: {
     color: "#96919B",
-    fontSize: 15,
-    marginTop: 10,
+    fontSize: 14,
+    lineHeight: 21,
+    textAlign: "center",
+    marginTop: 12,
   },
 
+  // =========================
+  // FORM
+  // =========================
+
   form: {
-    marginTop: 20,
+    marginTop: 30,
+  },
+
+  field: {
+    marginBottom: 18,
   },
 
   label: {
-    color: "#77727C",
-    fontSize: 10,
-    letterSpacing: 1.5,
-    marginTop: 12,
-    marginBottom: 7,
+    color: "#AFA7B0",
+    fontSize: 9,
+    letterSpacing: 2,
+    marginBottom: 8,
+    fontWeight: "600",
   },
 
   input: {
-    height: 48,
-    backgroundColor: "#17141C",
+    height: 52,
+
+    backgroundColor: "#131117",
+
     borderWidth: 1,
-    borderColor: "#29242F",
-    paddingHorizontal: 16,
+    borderColor: "#29252D",
+
     color: "#F5F1E8",
+
+    paddingHorizontal: 16,
+
     fontSize: 15,
+
+    borderRadius: 2,
   },
 
-  button: {
-    height: 54,
-    backgroundColor: "#C9A45C",
+  // =========================
+  // BOTTOM
+  // =========================
+
+  bottom: {
+    marginTop: "auto",
+  },
+
+  createButton: {
+    height: 58,
+
+    backgroundColor: "#D2A653",
+
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 25,
+
+    borderWidth: 1,
+    borderColor: "#E5C06D",
+
+    shadowColor: "#C9A45C",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+
+    elevation: 5,
   },
 
-  buttonDisabled: {
-    opacity: 0.6,
+  createButtonDisabled: {
+    opacity: 0.55,
   },
 
-  buttonText: {
+  createButtonText: {
     color: "#0B0A0F",
-    fontSize: 11,
+
+    fontSize: 12,
+
     fontWeight: "600",
-    letterSpacing: 1.5,
+
+    letterSpacing: 2.5,
   },
 
-  loginText: {
-    color: "#C9A45C",
-    fontSize: 10,
-    letterSpacing: 1.2,
-    textAlign: "center",
-    marginTop: 18,
+  loginRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+
+    marginTop: 20,
+  },
+
+  loginPrompt: {
+    color: "#77727C",
+
+    fontSize: 9,
+
+    letterSpacing: 1.8,
+
+    marginRight: 7,
+  },
+
+  loginLink: {
+    color: "#D6AA58",
+
+    fontSize: 9,
+
+    letterSpacing: 1.8,
+
+    fontWeight: "600",
   },
 });
