@@ -25,10 +25,33 @@ type Venue = {
   rating: number | null;
 };
 
+type Review = {
+  id: string;
+  rating: number;
+  review_text: string | null;
+  created_at: string;
+  profile: {
+    name: string | null;
+  } | null;
+};
+
+type SupabaseReview = {
+  id: string;
+  rating: number;
+  review_text: string | null;
+  created_at: string;
+  profile:
+    | {
+        name: string | null;
+      }[]
+    | null;
+};
+
 export default function VenueScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
 
   const [venue, setVenue] = useState<Venue | null>(null);
+  const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
@@ -80,6 +103,39 @@ export default function VenueScreen() {
     }
 
     setIsSaved(!!savedVenue);
+
+    const { data: reviewData, error: reviewError } = await supabase
+      .from("reviews")
+      .select(
+        `
+        id,
+        rating,
+        review_text,
+        created_at,
+        profile:profiles (
+          name
+        )
+      `,
+      )
+      .eq("venue_id", id)
+      .order("created_at", { ascending: false });
+
+    if (reviewError) {
+      console.log("Error loading reviews:", reviewError.message);
+    } else {
+      const formattedReviews: Review[] = (
+        (reviewData as SupabaseReview[]) ?? []
+      ).map((review) => ({
+        id: review.id,
+        rating: review.rating,
+        review_text: review.review_text,
+        created_at: review.created_at,
+        profile: review.profile?.[0] ?? null,
+      }));
+
+      setReviews(formattedReviews);
+    }
+
     setLoading(false);
   }
 
@@ -173,6 +229,13 @@ export default function VenueScreen() {
       ? "$".repeat(Math.max(1, Math.min(venue.price_level, 5)))
       : "—";
 
+  const reviewAverage =
+    reviews.length > 0
+      ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
+      : null;
+
+  const displayedRating = reviewAverage !== null ? reviewAverage : venue.rating;
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
@@ -192,17 +255,23 @@ export default function VenueScreen() {
         <Text style={styles.title}>{venue.name}</Text>
 
         <View style={styles.ratingRow}>
-          {venue.rating !== null && (
+          {displayedRating !== null && (
             <>
               <Text style={styles.star}>★</Text>
 
               <Text style={styles.rating}>
-                {Number(venue.rating).toFixed(1)}
+                {Number(displayedRating).toFixed(1)}
               </Text>
             </>
           )}
 
-          <Text style={styles.reviews}>REVIEWS COMING SOON</Text>
+          <Text style={styles.reviews}>
+            {reviews.length === 0
+              ? "NO REVIEWS YET"
+              : `${reviews.length} ${
+                  reviews.length === 1 ? "REVIEW" : "REVIEWS"
+                }`}
+          </Text>
         </View>
 
         <Text style={styles.description}>
@@ -253,6 +322,59 @@ export default function VenueScreen() {
         <Pressable style={styles.button}>
           <Text style={styles.buttonText}>GET DIRECTIONS</Text>
         </Pressable>
+
+        <Pressable
+          style={styles.reviewButton}
+          onPress={() =>
+            router.push({
+              pathname: "/review",
+              params: {
+                id: venue.id,
+                venueName: venue.name,
+              },
+            })
+          }
+        >
+          <Text style={styles.reviewButtonText}>WRITE A REVIEW</Text>
+        </Pressable>
+
+        <View style={styles.reviewsSection}>
+          <View style={styles.reviewHeader}>
+            <Text style={styles.reviewTitle}>REVIEWS</Text>
+
+            <Text style={styles.reviewCount}>{reviews.length}</Text>
+          </View>
+
+          {reviews.length === 0 ? (
+            <View style={styles.noReviews}>
+              <Text style={styles.noReviewsTitle}>NO REVIEWS YET</Text>
+
+              <Text style={styles.noReviewsText}>
+                Be the first to share your experience at this spot.
+              </Text>
+            </View>
+          ) : (
+            reviews.map((review) => (
+              <View key={review.id} style={styles.reviewCard}>
+                <View style={styles.reviewTop}>
+                  <Text style={styles.reviewerName}>
+                    {review.profile?.name ?? "THE DOOR MEMBER"}
+                  </Text>
+
+                  <View style={styles.reviewRating}>
+                    <Text style={styles.star}>★</Text>
+
+                    <Text style={styles.reviewRatingText}>{review.rating}</Text>
+                  </View>
+                </View>
+
+                {review.review_text && (
+                  <Text style={styles.reviewText}>{review.review_text}</Text>
+                )}
+              </View>
+            ))
+          )}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -262,6 +384,22 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#0B0A0F",
+  },
+
+  reviewButton: {
+    height: 52,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#C9A45C",
+    marginTop: 12,
+  },
+
+  reviewButtonText: {
+    color: "#C9A45C",
+    fontSize: 11,
+    fontWeight: "600",
+    letterSpacing: 1.5,
   },
 
   scrollContent: {
@@ -412,6 +550,88 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "600",
     letterSpacing: 1.5,
+  },
+
+  reviewsSection: {
+    marginTop: 40,
+  },
+
+  reviewHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 15,
+  },
+
+  reviewTitle: {
+    color: "#F5F1E8",
+    fontSize: 12,
+    letterSpacing: 2,
+  },
+
+  reviewCount: {
+    color: "#C9A45C",
+    fontSize: 11,
+  },
+
+  noReviews: {
+    backgroundColor: "#17141C",
+    borderWidth: 1,
+    borderColor: "#29242F",
+    padding: 24,
+    alignItems: "center",
+  },
+
+  noReviewsTitle: {
+    color: "#C9A45C",
+    fontSize: 10,
+    letterSpacing: 1.5,
+  },
+
+  noReviewsText: {
+    color: "#77727C",
+    fontSize: 13,
+    lineHeight: 20,
+    textAlign: "center",
+    marginTop: 8,
+  },
+
+  reviewCard: {
+    backgroundColor: "#17141C",
+    borderWidth: 1,
+    borderColor: "#29242F",
+    padding: 18,
+    marginBottom: 12,
+  },
+
+  reviewTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  reviewerName: {
+    color: "#F5F1E8",
+    fontSize: 11,
+    letterSpacing: 1,
+  },
+
+  reviewRating: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  reviewRatingText: {
+    color: "#F5F1E8",
+    fontSize: 12,
+    marginLeft: 4,
+  },
+
+  reviewText: {
+    color: "#96919B",
+    fontSize: 14,
+    lineHeight: 21,
+    marginTop: 12,
   },
 
   loadingContainer: {
