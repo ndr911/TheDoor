@@ -9,28 +9,44 @@ export default function ProfileScreen() {
   const [userEmail, setUserEmail] = useState("");
 
   useEffect(() => {
-    loadUser();
+    loadProfile();
   }, []);
 
-  async function loadUser() {
+  async function loadProfile() {
+    // First get the currently authenticated user
     const {
       data: { user },
-      error,
+      error: userError,
     } = await supabase.auth.getUser();
 
-    if (error) {
-      console.log("Error loading profile:", error.message);
+    if (userError) {
+      console.log("Error loading user:", userError.message);
       return;
     }
 
-    const name = user?.user_metadata?.name;
-
-    if (name) {
-      setUserName(name.trim());
+    if (!user) {
+      console.log("No authenticated user found.");
+      return;
     }
 
-    if (user?.email) {
-      setUserEmail(user.email);
+    // Then get that user's profile from public.profiles
+    const { data, error: profileError } = await supabase
+      .from("profiles")
+      .select("name, email")
+      .eq("id", user.id)
+      .single();
+
+    if (profileError) {
+      console.log("Error loading profile:", profileError.message);
+      return;
+    }
+
+    if (data?.name) {
+      setUserName(data.name.trim());
+    }
+
+    if (data?.email) {
+      setUserEmail(data.email);
     }
   }
 
