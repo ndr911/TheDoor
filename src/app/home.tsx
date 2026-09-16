@@ -21,25 +21,22 @@ const COLORS = {
   white: "#FFFFFF",
 };
 
-const topSpots = [
-  {
-    name: "The Hidden Chapter",
-    location: "West Village",
-    rating: "4.9",
-    image:
-      "https://images.unsplash.com/photo-1572116469696-31de0f17cc34?auto=format&fit=crop&w=900&q=80",
-  },
-  {
-    name: "Velvet & Smoke",
-    location: "SoHo",
-    rating: "4.8",
-    image:
-      "https://images.unsplash.com/photo-1515003197210-e0cd71810b5f?auto=format&fit=crop&w=900&q=80",
-  },
-];
-
 export default function HomeScreen() {
   const [userName, setUserName] = useState("THERE");
+
+  const [savedCount, setSavedCount] = useState(0);
+  const [visitCount, setVisitCount] = useState(0);
+  const [reviewCount, setReviewCount] = useState(0);
+
+  const [topSpots, setTopSpots] = useState<
+    {
+      id: string;
+      name: string;
+      location: string;
+      rating: string;
+      image: string;
+    }[]
+  >([]);
 
   useEffect(() => {
     loadUser();
@@ -51,15 +48,79 @@ export default function HomeScreen() {
       error,
     } = await supabase.auth.getUser();
 
-    if (error) {
-      console.log("Error loading user:", error.message);
+    if (error || !user) {
+      console.log("Error loading user:", error?.message);
       return;
     }
 
-    const name = user?.user_metadata?.name;
+    // Load user's name
+    const name = user.user_metadata?.name;
 
     if (name) {
       setUserName(name.trim());
+    }
+
+    // Count saved venues
+    const { count: savedCount, error: savedError } = await supabase
+      .from("saved_venues")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id);
+
+    if (savedError) {
+      console.log("Error loading saved count:", savedError.message);
+    } else {
+      setSavedCount(savedCount ?? 0);
+    }
+
+    // Count reviews
+    const { count: reviewCount, error: reviewError } = await supabase
+      .from("reviews")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id);
+
+    if (reviewError) {
+      console.log("Error loading review count:", reviewError.message);
+    } else {
+      setReviewCount(reviewCount ?? 0);
+    }
+
+    // Count unique venues reviewed.
+    // For now, this represents the user's visits.
+    const { data: reviewedVenues, error: visitError } = await supabase
+      .from("reviews")
+      .select("venue_id")
+      .eq("user_id", user.id);
+
+    if (visitError) {
+      console.log("Error loading visit count:", visitError.message);
+    } else {
+      const uniqueVenueIds = new Set(
+        (reviewedVenues ?? []).map((review) => review.venue_id),
+      );
+
+      setVisitCount(uniqueVenueIds.size);
+    }
+    // Load top-rated venues
+    const { data: topVenueData, error: topVenueError } = await supabase
+      .from("venues")
+      .select("id, name, neighborhood, rating, image_url")
+      .order("rating", { ascending: false })
+      .limit(2);
+
+    if (topVenueError) {
+      console.log("Error loading top spots:", topVenueError.message);
+    } else {
+      const formattedTopSpots = (topVenueData ?? []).map((venue) => ({
+        id: venue.id,
+        name: venue.name,
+        location: venue.neighborhood ?? "",
+        rating: venue.rating?.toString() ?? "0.0",
+        image:
+          venue.image_url ??
+          "https://images.unsplash.com/photo-1572116469696-31de0f17cc34?auto=format&fit=crop&w=900&q=80",
+      }));
+
+      setTopSpots(formattedTopSpots);
     }
   }
 
@@ -93,11 +154,11 @@ export default function HomeScreen() {
 
         {/* Stats */}
         <View style={styles.statsRow}>
-          <StatCard icon="♡" number="12" label="SAVED" />
+          <StatCard icon="♡" number={savedCount.toString()} label="SAVED" />
 
-          <StatCard icon="✓" number="8" label="VISITS" />
+          <StatCard icon="✓" number={visitCount.toString()} label="VISITS" />
 
-          <StatCard icon="★" number="5" label="REVIEWS" />
+          <StatCard icon="★" number={reviewCount.toString()} label="REVIEWS" />
         </View>
 
         {/* Top Spots */}
@@ -110,7 +171,7 @@ export default function HomeScreen() {
         >
           {topSpots.map((venue) => (
             <VenueCard
-              key={venue.name}
+              key={venue.id}
               name={venue.name}
               location={venue.location}
               rating={venue.rating}
@@ -189,7 +250,9 @@ function StatCard({
   return (
     <View style={styles.statCard}>
       <Text style={styles.statIcon}>{icon}</Text>
+
       <Text style={styles.statNumber}>{number}</Text>
+
       <Text style={styles.statLabel}>{label}</Text>
     </View>
   );
