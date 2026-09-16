@@ -1,5 +1,7 @@
 import { router } from "expo-router";
+import { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -8,28 +10,61 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { supabase } from "../../lib/supabase";
 
 const categories = ["ALL", "COCKTAILS", "SPEAKEASIES", "ROOFTOPS"];
 
-const venues = [
-  {
-    name: "THE HIDDEN CHAPTER",
-    neighborhood: "WEST VILLAGE",
-    rating: "4.9",
-  },
-  {
-    name: "VELVET & SMOKE",
-    neighborhood: "SOHO",
-    rating: "4.8",
-  },
-  {
-    name: "THE MIDNIGHT ROOM",
-    neighborhood: "LOWER EAST SIDE",
-    rating: "4.9",
-  },
-];
+type Venue = {
+  id: string;
+  name: string;
+  neighborhood: string | null;
+  rating: number | null;
+  category: string | null;
+};
 
 export default function DiscoverScreen() {
+  const [venues, setVenues] = useState<Venue[]>([]);
+  const [searchText, setSearchText] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("ALL");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadVenues();
+  }, []);
+
+  async function loadVenues() {
+    setLoading(true);
+
+    const { data, error } = await supabase
+      .from("venues")
+      .select("id, name, neighborhood, rating, category")
+      .order("rating", { ascending: false });
+
+    if (error) {
+      console.log("Error loading venues:", error.message);
+      setLoading(false);
+      return;
+    }
+
+    setVenues(data ?? []);
+    setLoading(false);
+  }
+
+  const filteredVenues = venues.filter((venue) => {
+    const search = searchText.trim().toLowerCase();
+
+    const matchesSearch =
+      !search ||
+      venue.name.toLowerCase().includes(search) ||
+      venue.neighborhood?.toLowerCase().includes(search);
+
+    const matchesCategory =
+      selectedCategory === "ALL" ||
+      venue.category?.toUpperCase() === selectedCategory;
+
+    return matchesSearch && matchesCategory;
+  });
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
@@ -46,6 +81,10 @@ export default function DiscoverScreen() {
           style={styles.search}
           placeholder="Search bars, cocktails, neighborhoods..."
           placeholderTextColor="#77727C"
+          value={searchText}
+          onChangeText={setSearchText}
+          autoCapitalize="none"
+          autoCorrect={false}
         />
 
         <ScrollView
@@ -53,53 +92,84 @@ export default function DiscoverScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.categories}
         >
-          {categories.map((category, index) => (
-            <Pressable
-              key={category}
-              style={[styles.category, index === 0 && styles.categoryActive]}
-            >
-              <Text
-                style={[
-                  styles.categoryText,
-                  index === 0 && styles.categoryTextActive,
-                ]}
+          {categories.map((category) => {
+            const isActive = selectedCategory === category;
+
+            return (
+              <Pressable
+                key={category}
+                onPress={() => setSelectedCategory(category)}
+                style={[styles.category, isActive && styles.categoryActive]}
               >
-                {category}
-              </Text>
-            </Pressable>
-          ))}
+                <Text
+                  style={[
+                    styles.categoryText,
+                    isActive && styles.categoryTextActive,
+                  ]}
+                >
+                  {category}
+                </Text>
+              </Pressable>
+            );
+          })}
         </ScrollView>
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>TOP SPOTS</Text>
-          <Text style={styles.sectionLink}>VIEW ALL</Text>
+
+          <Text style={styles.sectionLink}>
+            {filteredVenues.length}{" "}
+            {filteredVenues.length === 1 ? "SPOT" : "SPOTS"}
+          </Text>
         </View>
 
-        {venues.map((venue) => (
-          <Pressable
-            key={venue.name}
-            style={styles.venueCard}
-            onPress={() =>
-              venue.name === "THE HIDDEN CHAPTER" && router.push("/venue")
-            }
-          >
-            <View style={styles.imagePlaceholder}>
-              <Text style={styles.imageText}>THE DOOR</Text>
-            </View>
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color="#C9A45C" />
 
-            <View style={styles.venueInfo}>
-              <View style={styles.venueMain}>
-                <Text style={styles.venueName}>{venue.name}</Text>
-                <Text style={styles.neighborhood}>{venue.neighborhood}</Text>
+            <Text style={styles.loadingText}>OPENING THE DOOR...</Text>
+          </View>
+        ) : filteredVenues.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyTitle}>NO SPOTS FOUND</Text>
+
+            <Text style={styles.emptyText}>
+              Try another category, neighborhood, or search term.
+            </Text>
+          </View>
+        ) : (
+          filteredVenues.map((venue) => (
+            <Pressable
+              key={venue.id}
+              style={styles.venueCard}
+              onPress={() => router.push("/venue")}
+            >
+              <View style={styles.imagePlaceholder}>
+                <Text style={styles.imageText}>THE DOOR</Text>
               </View>
 
-              <View style={styles.rating}>
-                <Text style={styles.star}>★</Text>
-                <Text style={styles.ratingText}>{venue.rating}</Text>
+              <View style={styles.venueInfo}>
+                <View style={styles.venueMain}>
+                  <Text style={styles.venueName}>{venue.name}</Text>
+
+                  <Text style={styles.neighborhood}>
+                    {venue.neighborhood ?? "NEW YORK"}
+                  </Text>
+                </View>
+
+                {venue.rating !== null && (
+                  <View style={styles.rating}>
+                    <Text style={styles.star}>★</Text>
+
+                    <Text style={styles.ratingText}>
+                      {Number(venue.rating).toFixed(1)}
+                    </Text>
+                  </View>
+                )}
               </View>
-            </View>
-          </Pressable>
-        ))}
+            </Pressable>
+          ))
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -254,5 +324,37 @@ const styles = StyleSheet.create({
     color: "#F5F1E8",
     fontSize: 12,
     marginLeft: 4,
+  },
+
+  loadingContainer: {
+    alignItems: "center",
+    paddingVertical: 40,
+  },
+
+  loadingText: {
+    color: "#77727C",
+    fontSize: 9,
+    letterSpacing: 1.5,
+    marginTop: 12,
+  },
+
+  emptyContainer: {
+    alignItems: "center",
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+  },
+
+  emptyTitle: {
+    color: "#C9A45C",
+    fontSize: 12,
+    letterSpacing: 2,
+  },
+
+  emptyText: {
+    color: "#77727C",
+    fontSize: 13,
+    textAlign: "center",
+    marginTop: 10,
+    lineHeight: 20,
   },
 });
