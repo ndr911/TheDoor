@@ -142,7 +142,12 @@ export default function DiscoverScreen() {
             <Pressable
               key={venue.id}
               style={styles.venueCard}
-              onPress={() => router.push("/venue")}
+              onPress={() =>
+                router.push({
+                  pathname: "/venue",
+                  params: { id: venue.id },
+                })
+              }
             >
               <View style={styles.imagePlaceholder}>
                 <Text style={styles.imageText}>THE DOOR</Text>
