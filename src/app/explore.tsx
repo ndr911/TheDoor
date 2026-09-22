@@ -1,3 +1,4 @@
+import * as Location from "expo-location";
 import { router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -34,6 +35,7 @@ type Venue = {
   category: string | null;
   image_url: string | null;
   price_level: number | null;
+  zip_code: string | null;
 };
 
 export default function DiscoverScreen() {
@@ -46,15 +48,20 @@ export default function DiscoverScreen() {
   const [filterOpen, setFilterOpen] = useState(false);
 
   const [selectedPrice, setSelectedPrice] = useState<number | null>(null);
-
+  const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
   const [selectedRating, setSelectedRating] = useState<string | null>(null);
+  const [selectedZip, setSelectedZip] = useState<string | null>(null);
+  const [userZip, setUserZip] = useState<string | null>(null);
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
 
   // Temporary filter values.
   // These allow the user to select filters and then
   // press APPLY before they affect the results.
   const [pendingPrice, setPendingPrice] = useState<number | null>(null);
-
+  const [pendingLocation, setPendingLocation] = useState<string | null>(null);
   const [pendingRating, setPendingRating] = useState<string | null>(null);
+  const [pendingZip, setPendingZip] = useState<string | null>(null);
 
   useEffect(() => {
     loadVenues();
@@ -66,7 +73,7 @@ export default function DiscoverScreen() {
     const { data, error } = await supabase
       .from("venues")
       .select(
-        "id, name, neighborhood, rating, category, image_url, price_level",
+        "id, name, neighborhood, rating, category, image_url, price_level, zip_code",
       )
       .order("rating", { ascending: false });
 
@@ -81,23 +88,68 @@ export default function DiscoverScreen() {
     setLoading(false);
   }
 
+  async function getUserLocation() {
+    setLocationLoading(true);
+    setLocationError(null);
+
+    const { status } = await Location.requestForegroundPermissionsAsync();
+
+    if (status !== "granted") {
+      setLocationError("Location permission is required.");
+      setLocationLoading(false);
+      return;
+    }
+
+    try {
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+
+      const [address] = await Location.reverseGeocodeAsync({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      });
+
+      const zip = address?.postalCode;
+
+      if (!zip) {
+        setLocationError("Couldn't determine your ZIP code.");
+        setLocationLoading(false);
+        return;
+      }
+
+      setUserZip(zip);
+      setPendingZip(zip);
+    } catch (error) {
+      console.log("Error getting location:", error);
+      setLocationError("Couldn't determine your location.");
+    } finally {
+      setLocationLoading(false);
+    }
+  }
+
   function openFilters() {
     setPendingPrice(selectedPrice);
     setPendingRating(selectedRating);
+    setPendingZip(selectedZip);
     setFilterOpen(true);
   }
 
   function applyFilters() {
     setSelectedPrice(pendingPrice);
     setSelectedRating(pendingRating);
+    setSelectedZip(pendingZip);
     setFilterOpen(false);
   }
 
   function clearFilters() {
     setPendingPrice(null);
     setPendingRating(null);
+    setPendingZip(null);
+
     setSelectedPrice(null);
     setSelectedRating(null);
+    setSelectedZip(null);
   }
 
   function togglePrice(price: number) {
@@ -115,6 +167,14 @@ export default function DiscoverScreen() {
       setPendingRating(rating);
     }
   }
+
+  const locationOptions = useMemo(() => {
+    const locations = venues
+      .map((venue) => venue.neighborhood)
+      .filter((location): location is string => Boolean(location?.trim()));
+
+    return [...new Set(locations)].sort((a, b) => a.localeCompare(b));
+  }, [venues]);
 
   const filteredVenues = useMemo(() => {
     return venues.filter((venue) => {
@@ -168,6 +228,12 @@ export default function DiscoverScreen() {
         matchesRating = Number(venue.rating) >= minimumRating;
       }
 
+      let matchesLocation = true;
+
+      if (selectedZip) {
+        matchesLocation = venue.zip_code === selectedZip;
+      }
+
       /*
        * If a rating filter is selected and the venue
        * has no rating, don't include it.
@@ -177,11 +243,25 @@ export default function DiscoverScreen() {
         matchesRating = false;
       }
 
-      return matchesSearch && matchesCategory && matchesPrice && matchesRating;
+      return (
+        matchesSearch &&
+        matchesCategory &&
+        matchesPrice &&
+        matchesRating &&
+        matchesLocation
+      );
     });
-  }, [venues, searchText, selectedCategory, selectedPrice, selectedRating]);
+  }, [
+    venues,
+    searchText,
+    selectedCategory,
+    selectedPrice,
+    selectedRating,
+    selectedZip,
+  ]);
 
-  const activeFilterCount = (selectedPrice ? 1 : 0) + (selectedRating ? 1 : 0);
+  const activeFilterCount =
+    (selectedPrice ? 1 : 0) + (selectedRating ? 1 : 0) + (selectedZip ? 1 : 0);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -361,15 +441,46 @@ export default function DiscoverScreen() {
 
               {/* DISTANCE */}
 
+              {/* LOCATION */}
+
+              {/* LOCATION */}
+
               <Text style={[styles.filterHeading, styles.ratingHeading]}>
-                DISTANCE
+                LOCATION
               </Text>
 
-              <View style={styles.distanceComingSoon}>
-                <Text style={styles.distanceComingSoonText}>
-                  DISTANCE FILTER COMING SOON
-                </Text>
-              </View>
+              <Pressable
+                style={[
+                  styles.locationBar,
+                  pendingZip && styles.locationBarActive,
+                ]}
+                onPress={getUserLocation}
+                disabled={locationLoading}
+              >
+                <View style={styles.locationBarLeft}>
+                  <Text style={styles.locationIcon}>⌖</Text>
+
+                  <View>
+                    <Text style={styles.locationBarLabel}>
+                      {locationLoading
+                        ? "FINDING YOUR LOCATION..."
+                        : pendingZip
+                          ? "NEAR YOU"
+                          : "USE MY LOCATION"}
+                    </Text>
+
+                    {pendingZip && (
+                      <Text style={styles.locationZip}>{pendingZip}</Text>
+                    )}
+                  </View>
+                </View>
+
+                <Text style={styles.locationArrow}>›</Text>
+              </Pressable>
+
+              {locationError && (
+                <Text style={styles.locationError}>{locationError}</Text>
+              )}
 
               {/* ACTIONS */}
 
@@ -555,6 +666,62 @@ const styles = StyleSheet.create({
 
   screen: {
     flex: 1,
+  },
+
+  locationBar: {
+    height: 64,
+    borderWidth: 1,
+    borderColor: "#29242F",
+    backgroundColor: "#17141C",
+    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+
+  locationBarActive: {
+    borderColor: "#C9A45C",
+  },
+
+  locationBarLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  locationIcon: {
+    color: "#C9A45C",
+    fontSize: 22,
+    marginRight: 12,
+  },
+
+  locationBarLabel: {
+    color: "#F5F1E8",
+    fontSize: 10,
+    letterSpacing: 1.5,
+  },
+
+  locationZip: {
+    color: "#C9A45C",
+    fontSize: 11,
+    letterSpacing: 1.5,
+    marginTop: 3,
+  },
+
+  locationArrow: {
+    color: "#C9A45C",
+    fontSize: 24,
+  },
+
+  locationError: {
+    color: "#77727C",
+    fontSize: 9,
+    letterSpacing: 0.8,
+    marginTop: 8,
+  },
+
+  locationOptions: {
+    gap: 8,
+    paddingRight: 8,
   },
 
   scrollContent: {
