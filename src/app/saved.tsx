@@ -109,6 +109,7 @@ export default function SavedScreen() {
         contentContainerStyle={styles.scrollContent}
       >
         {/* HEADER */}
+
         <Text style={styles.eyebrow}>THE DOOR</Text>
 
         <Text style={styles.title}>SAVED</Text>
@@ -118,6 +119,7 @@ export default function SavedScreen() {
         </Text>
 
         {/* LOADING */}
+
         {loading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="small" color="#C9A45C" />
@@ -126,7 +128,12 @@ export default function SavedScreen() {
           </View>
         ) : savedVenues.length === 0 ? (
           /* EMPTY STATE */
-          <View style={styles.emptyContainer}>
+
+          <View style={styles.emptyCard}>
+            <View style={styles.emptyIconCircle}>
+              <Text style={styles.emptyIcon}>♡</Text>
+            </View>
+
             <Text style={styles.emptyTitle}>NOTHING SAVED YET</Text>
 
             <Text style={styles.emptyText}>
@@ -134,7 +141,10 @@ export default function SavedScreen() {
             </Text>
 
             <Pressable
-              style={styles.exploreButton}
+              style={({ pressed }) => [
+                styles.exploreButton,
+                pressed && styles.buttonPressed,
+              ]}
               onPress={() => router.push("/explore")}
             >
               <Text style={styles.exploreButtonText}>EXPLORE VENUES</Text>
@@ -142,14 +152,18 @@ export default function SavedScreen() {
           </View>
         ) : (
           /* SAVED VENUES */
+
           <View style={styles.venueList}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>YOUR SPOTS</Text>
+              <View>
+                <Text style={styles.sectionTitle}>YOUR SPOTS</Text>
 
-              <Text style={styles.sectionCount}>
-                {savedVenues.length}{" "}
-                {savedVenues.length === 1 ? "SPOT" : "SPOTS"}
-              </Text>
+                <View style={styles.sectionAccent} />
+              </View>
+
+              <View style={styles.countBadge}>
+                <Text style={styles.sectionCount}>{savedVenues.length}</Text>
+              </View>
             </View>
 
             {savedVenues.map((saved) => {
@@ -163,7 +177,10 @@ export default function SavedScreen() {
               return (
                 <Pressable
                   key={saved.id}
-                  style={styles.venueCard}
+                  style={({ pressed }) => [
+                    styles.venueCard,
+                    pressed && styles.cardPressed,
+                  ]}
                   onPress={() =>
                     router.push({
                       pathname: "/venue",
@@ -172,6 +189,7 @@ export default function SavedScreen() {
                   }
                 >
                   {/* IMAGE */}
+
                   <View style={styles.imageContainer}>
                     <Image
                       source={
@@ -183,7 +201,12 @@ export default function SavedScreen() {
                       resizeMode="cover"
                     />
 
+                    {/* IMAGE OVERLAY */}
+
+                    <View style={styles.imageOverlay} />
+
                     {/* RATING */}
+
                     {venue.rating !== null && (
                       <View style={styles.imageRating}>
                         <Text style={styles.star}>★</Text>
@@ -196,6 +219,7 @@ export default function SavedScreen() {
                   </View>
 
                   {/* VENUE INFO */}
+
                   <View style={styles.venueInfo}>
                     <View style={styles.venueMain}>
                       <Text style={styles.venueName} numberOfLines={1}>
@@ -203,7 +227,7 @@ export default function SavedScreen() {
                       </Text>
 
                       <View style={styles.metaRow}>
-                        <Text style={styles.neighborhood}>
+                        <Text style={styles.neighborhood} numberOfLines={1}>
                           {venue.neighborhood ?? "NEW YORK"}
                         </Text>
 
@@ -215,6 +239,10 @@ export default function SavedScreen() {
                           </>
                         )}
                       </View>
+                    </View>
+
+                    <View style={styles.chevronContainer}>
+                      <Text style={styles.chevron}>›</Text>
                     </View>
                   </View>
                 </Pressable>
@@ -243,51 +271,32 @@ const styles = StyleSheet.create({
 
   eyebrow: {
     color: "#C9A45C",
-    fontSize: 11,
+    fontSize: 10,
     letterSpacing: 3,
-    marginBottom: 14,
+    marginBottom: 10,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   title: {
     color: "#F5F1E8",
-    fontSize: 34,
-    fontWeight: "600",
-    letterSpacing: 2,
+    fontSize: 38,
+    letterSpacing: 3,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   subtitle: {
     color: "#96919B",
-    fontSize: 15,
-    marginTop: 10,
-  },
-
-  /* SECTION */
-
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 10,
-    marginBottom: 14,
-  },
-
-  sectionTitle: {
-    color: "#F5F1E8",
-    fontSize: 12,
-    letterSpacing: 2,
-  },
-
-  sectionCount: {
-    color: "#C9A45C",
-    fontSize: 9,
-    letterSpacing: 1.5,
+    fontSize: 14,
+    lineHeight: 20,
+    marginTop: 8,
+    fontFamily: "CormorantGaramond_400Regular",
   },
 
   /* LOADING */
 
   loadingContainer: {
     alignItems: "center",
-    paddingVertical: 50,
+    paddingVertical: 70,
   },
 
   loadingText: {
@@ -295,20 +304,45 @@ const styles = StyleSheet.create({
     fontSize: 9,
     letterSpacing: 1.5,
     marginTop: 12,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   /* EMPTY */
 
-  emptyContainer: {
+  emptyCard: {
+    marginTop: 38,
+    backgroundColor: "#17141C",
+    borderWidth: 1,
+    borderColor: "#29242F",
+    borderRadius: 18,
+    paddingHorizontal: 24,
+    paddingVertical: 42,
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 55,
+  },
+
+  emptyIconCircle: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: "#1D1921",
+    borderWidth: 1,
+    borderColor: "#C9A45C",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 20,
+  },
+
+  emptyIcon: {
+    color: "#C9A45C",
+    fontSize: 30,
+    marginTop: -2,
   },
 
   emptyTitle: {
-    color: "#C9A45C",
-    fontSize: 12,
-    letterSpacing: 2,
+    color: "#F5F1E8",
+    fontSize: 15,
+    letterSpacing: 2.5,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   emptyText: {
@@ -317,37 +351,86 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     textAlign: "center",
     marginTop: 10,
-    maxWidth: 300,
+    maxWidth: 280,
+    fontFamily: "CormorantGaramond_400Regular",
   },
 
   exploreButton: {
-    height: 50,
+    height: 52,
+    width: "100%",
     backgroundColor: "#C9A45C",
-    paddingHorizontal: 24,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 24,
+    marginTop: 26,
   },
 
   exploreButtonText: {
     color: "#0B0A0F",
     fontSize: 10,
-    fontWeight: "600",
-    letterSpacing: 1.5,
+    letterSpacing: 2,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
-  /* VENUE LIST */
+  /* SECTION */
 
   venueList: {
-    marginTop: 28,
+    marginTop: 34,
   },
+
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+
+  sectionTitle: {
+    color: "#F5F1E8",
+    fontSize: 16,
+    letterSpacing: 2.5,
+    fontFamily: "CormorantGaramond_600SemiBold",
+  },
+
+  sectionAccent: {
+    width: 24,
+    height: 1,
+    backgroundColor: "#C9A45C",
+    marginTop: 6,
+  },
+
+  countBadge: {
+    minWidth: 34,
+    height: 30,
+    paddingHorizontal: 9,
+    borderRadius: 15,
+    backgroundColor: "#1A1710",
+    borderWidth: 1,
+    borderColor: "#C9A45C",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  sectionCount: {
+    color: "#D9B65E",
+    fontSize: 13,
+    fontFamily: "CormorantGaramond_600SemiBold",
+  },
+
+  /* VENUE CARD */
 
   venueCard: {
     backgroundColor: "#17141C",
     borderWidth: 1,
     borderColor: "#29242F",
+    borderRadius: 16,
     marginBottom: 16,
     overflow: "hidden",
+  },
+
+  cardPressed: {
+    opacity: 0.88,
+    transform: [{ scale: 0.992 }],
   },
 
   /* IMAGE */
@@ -363,18 +446,29 @@ const styles = StyleSheet.create({
     height: "100%",
   },
 
+  imageOverlay: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 70,
+    backgroundColor: "rgba(11, 10, 15, 0.16)",
+  },
+
   /* RATING */
 
   imageRating: {
     position: "absolute",
     right: 14,
     bottom: 12,
+    minHeight: 40,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(11, 10, 15, 0.82)",
+    backgroundColor: "rgba(11, 10, 15, 0.88)",
     borderWidth: 1,
     borderColor: "#C9A45C",
-    paddingHorizontal: 10,
+    borderRadius: 12,
+    paddingHorizontal: 11,
     paddingVertical: 6,
   },
 
@@ -389,14 +483,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     marginLeft: 5,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   /* VENUE INFO */
 
   venueInfo: {
+    minHeight: 76,
     flexDirection: "row",
-    justifyContent: "space-between",
-    padding: 16,
+    alignItems: "center",
+    paddingLeft: 16,
+    paddingRight: 12,
   },
 
   venueMain: {
@@ -405,21 +502,22 @@ const styles = StyleSheet.create({
 
   venueName: {
     color: "#F5F1E8",
-    fontSize: 14,
-    fontWeight: "600",
-    letterSpacing: 1,
+    fontSize: 17,
+    letterSpacing: 1.1,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   metaRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 6,
+    marginTop: 5,
   },
 
   neighborhood: {
     color: "#77727C",
-    fontSize: 9,
+    fontSize: 10,
     letterSpacing: 1.3,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   metaDivider: {
@@ -430,7 +528,34 @@ const styles = StyleSheet.create({
 
   price: {
     color: "#C9A45C",
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 1,
+    fontFamily: "CormorantGaramond_600SemiBold",
+  },
+
+  chevronContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#1D1921",
+    borderWidth: 1,
+    borderColor: "#29242F",
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 12,
+  },
+
+  chevron: {
+    color: "#C9A45C",
+    fontSize: 21,
+    lineHeight: 22,
+    marginTop: -2,
+  },
+
+  /* BUTTON PRESS */
+
+  buttonPressed: {
+    opacity: 0.82,
+    transform: [{ scale: 0.985 }],
   },
 });
