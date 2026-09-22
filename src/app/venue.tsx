@@ -11,6 +11,7 @@ import {
   Alert,
   ImageBackground,
   Linking,
+  Platform,
   Pressable,
   ScrollView,
   Share,
@@ -202,10 +203,28 @@ export default function VenueScreen() {
     }
   }
 
+  /*
+   * OPEN NATIVE MAPS
+   *
+   * iOS:
+   *   Apple Maps
+   *
+   * Android:
+   *   Google Maps
+   *
+   * If the native map URL cannot be opened,
+   * fall back to Google Maps in the browser.
+   */
   async function getDirections() {
     if (!venue) return;
 
-    const address = [venue.address, venue.neighborhood, venue.city, venue.state]
+    const address = [
+      venue.address,
+      venue.neighborhood,
+      venue.city,
+      venue.state,
+      "USA",
+    ]
       .filter(Boolean)
       .join(", ");
 
@@ -217,14 +236,41 @@ export default function VenueScreen() {
       return;
     }
 
-    const url =
-      "https://www.google.com/maps/search/?api=1&query=" +
-      encodeURIComponent(address);
+    const encodedAddress = encodeURIComponent(address);
+
+    let nativeMapsUrl: string;
+
+    if (Platform.OS === "ios") {
+      // Apple Maps
+      nativeMapsUrl = `http://maps.apple.com/?daddr=${encodedAddress}`;
+    } else {
+      // Google Maps
+      nativeMapsUrl = `geo:0,0?q=${encodedAddress}`;
+    }
+
+    // Browser fallback
+    const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}`;
 
     try {
-      await Linking.openURL(url);
+      const canOpenNativeMaps = await Linking.canOpenURL(nativeMapsUrl);
+
+      if (canOpenNativeMaps) {
+        await Linking.openURL(nativeMapsUrl);
+        return;
+      }
+
+      await Linking.openURL(googleMapsUrl);
     } catch (error) {
       console.error("Unable to open directions:", error);
+
+      try {
+        await Linking.openURL(googleMapsUrl);
+      } catch {
+        Alert.alert(
+          "Unable to open maps",
+          "Please try opening your maps application manually.",
+        );
+      }
     }
   }
 
@@ -424,8 +470,6 @@ export default function VenueScreen() {
           {/* WRITE REVIEW */}
 
           <View style={styles.reviewActionRow}>
-            <View />
-
             <Pressable
               onPress={() =>
                 router.push({
@@ -767,149 +811,233 @@ const styles = StyleSheet.create({
 
   /* DIRECTIONS */
 
+  /* ============================================================
+     MODERN BUTTONS
+  ============================================================ */
+
   directionsButton: {
-    height: 64,
-    borderWidth: 2,
-    borderColor: "#D9B65E",
+    height: 60,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#C9A45C",
+    backgroundColor: "#151219",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 25,
-    marginTop: 10,
+    gap: 14,
+    marginTop: 8,
+
+    // Subtle depth
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 6,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 4,
   },
 
   directionsText: {
     color: "#D9B65E",
     fontSize: 11,
-    letterSpacing: 4,
+    letterSpacing: 3,
     fontWeight: "600",
   },
 
   pressed: {
     opacity: 0.65,
+    transform: [{ scale: 0.985 }],
   },
 
-  /* REVIEWS */
+  /* ============================================================
+     REVIEWS HEADER
+  ============================================================ */
 
   reviewHeader: {
     borderTopWidth: 1,
-    borderColor: "#5A555D",
-    marginTop: 35,
-    paddingTop: 25,
+    borderColor: "#29242F",
+    marginTop: 42,
+    paddingTop: 28,
+
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    justifyContent: "space-between",
   },
 
   reviewTitle: {
     color: "#F6F0E6",
-    fontSize: 26,
-    letterSpacing: 5,
-    fontFamily: "CormorantGaramond_500Medium",
+    fontSize: 28,
+    letterSpacing: 4,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   reviewCount: {
-    color: "#F6F0E6",
-    fontSize: 23,
-    fontFamily: "CormorantGaramond_500Medium",
+    minWidth: 34,
+    height: 30,
+    paddingHorizontal: 9,
+
+    borderRadius: 15,
+    backgroundColor: "#1A1710",
+    borderWidth: 1,
+    borderColor: "#C9A45C",
+
+    color: "#D9B65E",
+    fontSize: 13,
+    textAlign: "center",
+    textAlignVertical: "center",
+
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
+  /* ============================================================
+     WRITE REVIEW
+  ============================================================ */
+
   reviewActionRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: -4,
-    marginBottom: 35,
+    marginTop: 18,
+    marginBottom: 26,
   },
 
   writeReviewButton: {
-    width: 230,
-    height: 52,
-    borderWidth: 2,
-    borderColor: "#D9B65E",
+    width: "100%",
+    height: 56,
+
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#C9A45C",
+    backgroundColor: "#C9A45C",
+
     alignItems: "center",
     justifyContent: "center",
+
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 5,
+    },
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    elevation: 3,
   },
 
   writeReviewText: {
-    color: "#D9B65E",
+    color: "#0B0A0F",
     fontSize: 10,
-    letterSpacing: 3,
+    fontWeight: "600",
+    letterSpacing: 2.5,
   },
 
-  /* REVIEW CARDS */
+  /* ============================================================
+     REVIEW LIST
+  ============================================================ */
 
   reviewList: {
-    gap: 18,
+    gap: 14,
   },
 
   reviewCard: {
+    backgroundColor: "#141218",
+
     borderWidth: 1,
-    borderColor: "#3E3A41",
-    paddingHorizontal: 28,
-    paddingVertical: 25,
-    minHeight: 150,
+    borderColor: "#29242F",
+    borderRadius: 16,
+
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+
+    minHeight: 140,
   },
 
   reviewTop: {
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "flex-start",
   },
 
   reviewerName: {
     color: "#D9B65E",
-    fontSize: 12,
-    letterSpacing: 5,
+    fontSize: 11,
+    letterSpacing: 3.5,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   reviewDate: {
-    color: "#F3EDE1",
-    fontSize: 11,
-    letterSpacing: 4,
-    marginTop: 10,
+    color: "#77727C",
+    fontSize: 9,
+    letterSpacing: 2,
+    marginTop: 5,
   },
 
   reviewRating: {
-    alignItems: "flex-end",
     flexDirection: "row",
-    gap: 12,
+    alignItems: "center",
+    gap: 8,
+
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+
+    borderRadius: 12,
+    backgroundColor: "#1A1710",
+    borderWidth: 1,
+    borderColor: "#403722",
   },
 
   stars: {
     color: "#DDB85F",
-    fontSize: 20,
-    letterSpacing: 3,
+    fontSize: 14,
+    letterSpacing: 1,
   },
 
   ratingNumber: {
     color: "#F4EEE3",
-    fontSize: 17,
+    fontSize: 14,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   reviewComment: {
-    color: "#E5DED4",
+    color: "#D8D1D8",
     fontSize: 18,
-    lineHeight: 27,
-    marginTop: 25,
+    lineHeight: 25,
+
+    marginTop: 18,
+
     fontFamily: "CormorantGaramond_500Medium",
   },
 
-  /* EMPTY REVIEWS */
+  /* ============================================================
+     EMPTY REVIEWS
+  ============================================================ */
 
   emptyReviews: {
     alignItems: "center",
-    paddingVertical: 50,
+
+    backgroundColor: "#141218",
+    borderWidth: 1,
+    borderColor: "#29242F",
+    borderRadius: 16,
+
+    paddingHorizontal: 25,
+    paddingVertical: 40,
+
+    marginTop: 4,
   },
 
   emptyTitle: {
     color: "#D9B65E",
     fontSize: 12,
-    letterSpacing: 4,
+    letterSpacing: 3,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   emptyText: {
     color: "#8C858E",
     fontSize: 15,
+    textAlign: "center",
+    lineHeight: 21,
     marginTop: 10,
+
+    fontFamily: "CormorantGaramond_500Medium",
   },
 
   /* LOADING */
