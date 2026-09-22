@@ -100,6 +100,7 @@ export default function HomeScreen() {
 
       setVisitCount(uniqueVenueIds.size);
     }
+
     // Load top-rated venues
     const { data: topVenueData, error: topVenueError } = await supabase
       .from("venues")
@@ -172,6 +173,7 @@ export default function HomeScreen() {
           {topSpots.map((venue) => (
             <VenueCard
               key={venue.id}
+              id={venue.id}
               name={venue.name}
               location={venue.location}
               rating={venue.rating}
@@ -271,18 +273,28 @@ function SectionHeader({ title, action }: { title: string; action: string }) {
 }
 
 function VenueCard({
+  id,
   name,
   location,
   rating,
   image,
 }: {
+  id: string;
   name: string;
   location: string;
   rating: string;
   image: string;
 }) {
   return (
-    <Pressable style={styles.venueCard}>
+    <Pressable
+      style={styles.venueCard}
+      onPress={() =>
+        router.push({
+          pathname: "/venue",
+          params: { id },
+        })
+      }
+    >
       <Image source={{ uri: image }} style={styles.venueImage} />
 
       <View style={styles.heartButton}>
