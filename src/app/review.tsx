@@ -1,22 +1,24 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase } from "../../lib/supabase";
 
 export default function ReviewScreen() {
-  const { id, venueName } = useLocalSearchParams<{
-    id: string;
-    venueName: string;
+  const { venueId, venueName } = useLocalSearchParams<{
+    venueId?: string;
+    venueName?: string;
   }>();
 
   const [rating, setRating] = useState(0);
@@ -24,7 +26,7 @@ export default function ReviewScreen() {
   const [submitting, setSubmitting] = useState(false);
 
   async function submitReview() {
-    if (!id) {
+    if (!venueId) {
       Alert.alert("Error", "No venue was selected.");
       return;
     }
@@ -48,7 +50,7 @@ export default function ReviewScreen() {
 
     const { error } = await supabase.from("reviews").insert({
       user_id: user.id,
-      venue_id: id,
+      venue_id: venueId,
       rating,
       review_text: reviewText.trim() || null,
     });
@@ -72,86 +74,97 @@ export default function ReviewScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+      <KeyboardAvoidingView
+        style={styles.keyboardContainer}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
       >
-        <Pressable onPress={() => router.back()}>
-          <Text style={styles.back}>‹ BACK</Text>
-        </Pressable>
-
-        <Text style={styles.eyebrow}>THE DOOR</Text>
-
-        <Text style={styles.title}>WRITE A REVIEW</Text>
-
-        <Text style={styles.subtitle}>Share your experience.</Text>
-
-        {venueName && (
-          <View style={styles.venueCard}>
-            <Text style={styles.venueLabel}>REVIEWING</Text>
-
-            <Text style={styles.venueName}>{venueName}</Text>
-          </View>
-        )}
-
-        <View style={styles.ratingSection}>
-          <Text style={styles.label}>YOUR RATING</Text>
-
-          <View style={styles.stars}>
-            {[1, 2, 3, 4, 5].map((star) => (
-              <Pressable
-                key={star}
-                onPress={() => setRating(star)}
-                style={styles.starButton}
-              >
-                <Text
-                  style={[styles.star, star <= rating && styles.starActive]}
-                >
-                  ★
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-
-          <Text style={styles.ratingHint}>
-            {rating === 0
-              ? "Select a rating"
-              : `${rating} ${rating === 1 ? "STAR" : "STARS"}`}
-          </Text>
-        </View>
-
-        <View style={styles.inputSection}>
-          <Text style={styles.label}>YOUR REVIEW</Text>
-
-          <TextInput
-            style={styles.textInput}
-            placeholder="What did you think?"
-            placeholderTextColor="#77727C"
-            value={reviewText}
-            onChangeText={setReviewText}
-            multiline
-            textAlignVertical="top"
-            maxLength={500}
-          />
-
-          <Text style={styles.characterCount}>{reviewText.length}/500</Text>
-        </View>
-
-        <Pressable
-          style={[
-            styles.submitButton,
-            (submitting || rating === 0) && styles.submitButtonDisabled,
-          ]}
-          onPress={submitReview}
-          disabled={submitting || rating === 0}
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+          automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
         >
-          {submitting ? (
-            <ActivityIndicator size="small" color="#0B0A0F" />
-          ) : (
-            <Text style={styles.submitButtonText}>SUBMIT REVIEW</Text>
+          <Pressable onPress={() => router.back()}>
+            <Text style={styles.back}>‹ BACK</Text>
+          </Pressable>
+
+          <Text style={styles.eyebrow}>THE DOOR</Text>
+
+          <Text style={styles.title}>WRITE A REVIEW</Text>
+
+          <Text style={styles.subtitle}>Share your experience.</Text>
+
+          {venueName && (
+            <View style={styles.venueCard}>
+              <Text style={styles.venueLabel}>REVIEWING</Text>
+
+              <Text style={styles.venueName}>{venueName}</Text>
+            </View>
           )}
-        </Pressable>
-      </ScrollView>
+
+          <View style={styles.ratingSection}>
+            <Text style={styles.label}>YOUR RATING</Text>
+
+            <View style={styles.stars}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <Pressable
+                  key={star}
+                  onPress={() => setRating(star)}
+                  style={styles.starButton}
+                >
+                  <Text
+                    style={[styles.star, star <= rating && styles.starActive]}
+                  >
+                    ★
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+
+            <Text style={styles.ratingHint}>
+              {rating === 0
+                ? "Select a rating"
+                : `${rating} ${rating === 1 ? "STAR" : "STARS"}`}
+            </Text>
+          </View>
+
+          <View style={styles.inputSection}>
+            <Text style={styles.label}>YOUR REVIEW</Text>
+
+            <TextInput
+              style={styles.textInput}
+              placeholder="What did you think?"
+              placeholderTextColor="#77727C"
+              value={reviewText}
+              onChangeText={setReviewText}
+              multiline
+              textAlignVertical="top"
+              maxLength={500}
+              scrollEnabled={true}
+            />
+
+            <Text style={styles.characterCount}>{reviewText.length}/500</Text>
+          </View>
+
+          <Pressable
+            style={[
+              styles.submitButton,
+              (submitting || rating === 0) && styles.submitButtonDisabled,
+            ]}
+            onPress={submitReview}
+            disabled={submitting || rating === 0}
+          >
+            {submitting ? (
+              <ActivityIndicator size="small" color="#0B0A0F" />
+            ) : (
+              <Text style={styles.submitButtonText}>SUBMIT REVIEW</Text>
+            )}
+          </Pressable>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -162,59 +175,74 @@ const styles = StyleSheet.create({
     backgroundColor: "#0B0A0F",
   },
 
+  keyboardContainer: {
+    flex: 1,
+  },
+
+  scrollView: {
+    flex: 1,
+  },
+
   scrollContent: {
     paddingHorizontal: 24,
     paddingTop: 20,
-    paddingBottom: 50,
+    paddingBottom: 180,
   },
 
   back: {
     color: "#C9A45C",
-    fontSize: 11,
+    fontSize: 12,
     letterSpacing: 2,
     marginBottom: 30,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   eyebrow: {
     color: "#C9A45C",
-    fontSize: 11,
+    fontSize: 12,
     letterSpacing: 3,
     marginBottom: 14,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   title: {
     color: "#F5F1E8",
-    fontSize: 30,
+    fontSize: 34,
     fontWeight: "600",
-    letterSpacing: 1.5,
+    letterSpacing: 2,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   subtitle: {
     color: "#96919B",
-    fontSize: 15,
+    fontSize: 16,
     marginTop: 10,
+    fontFamily: "CormorantGaramond_500Medium",
   },
 
   venueCard: {
     backgroundColor: "#17141C",
     borderWidth: 1,
     borderColor: "#29242F",
+    borderRadius: 14,
     padding: 18,
     marginTop: 30,
   },
 
   venueLabel: {
     color: "#77727C",
-    fontSize: 9,
+    fontSize: 10,
     letterSpacing: 1.5,
     marginBottom: 7,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   venueName: {
     color: "#F5F1E8",
-    fontSize: 15,
+    fontSize: 18,
     fontWeight: "600",
     letterSpacing: 1,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   ratingSection: {
@@ -223,9 +251,10 @@ const styles = StyleSheet.create({
 
   label: {
     color: "#77727C",
-    fontSize: 9,
+    fontSize: 10,
     letterSpacing: 1.5,
     marginBottom: 12,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   stars: {
@@ -240,6 +269,7 @@ const styles = StyleSheet.create({
   star: {
     color: "#39343F",
     fontSize: 36,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   starActive: {
@@ -248,9 +278,10 @@ const styles = StyleSheet.create({
 
   ratingHint: {
     color: "#96919B",
-    fontSize: 10,
+    fontSize: 12,
     letterSpacing: 1,
     marginTop: 8,
+    fontFamily: "CormorantGaramond_500Medium",
   },
 
   inputSection: {
@@ -259,25 +290,31 @@ const styles = StyleSheet.create({
 
   textInput: {
     minHeight: 150,
+    maxHeight: 220,
     backgroundColor: "#17141C",
     borderWidth: 1,
     borderColor: "#29242F",
-    padding: 16,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
     color: "#F5F1E8",
-    fontSize: 14,
-    lineHeight: 21,
+    fontSize: 18,
+    lineHeight: 25,
+    fontFamily: "CormorantGaramond_500Medium",
   },
 
   characterCount: {
     color: "#77727C",
-    fontSize: 9,
+    fontSize: 10,
     textAlign: "right",
     marginTop: 6,
+    fontFamily: "CormorantGaramond_500Medium",
   },
 
   submitButton: {
     backgroundColor: "#C9A45C",
     height: 54,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 30,
@@ -289,8 +326,9 @@ const styles = StyleSheet.create({
 
   submitButtonText: {
     color: "#0B0A0F",
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "600",
     letterSpacing: 1.5,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 });
