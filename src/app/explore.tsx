@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -17,6 +17,15 @@ const FALLBACK_IMAGE = require("../../assets/the_door_venue_placeholder.jpg");
 
 const categories = ["ALL", "COCKTAILS", "SPEAKEASIES", "ROOFTOPS"];
 
+const priceOptions = [
+  { label: "$", value: 1 },
+  { label: "$$", value: 2 },
+  { label: "$$$", value: 3 },
+  { label: "$$$$", value: 4 },
+];
+
+const ratingOptions = ["4.5+", "4.0+", "3.5+"];
+
 type Venue = {
   id: string;
   name: string;
@@ -24,13 +33,28 @@ type Venue = {
   rating: number | null;
   category: string | null;
   image_url: string | null;
+  price_level: number | null;
 };
 
 export default function DiscoverScreen() {
   const [venues, setVenues] = useState<Venue[]>([]);
   const [searchText, setSearchText] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("ALL");
+
   const [loading, setLoading] = useState(true);
+
+  const [filterOpen, setFilterOpen] = useState(false);
+
+  const [selectedPrice, setSelectedPrice] = useState<number | null>(null);
+
+  const [selectedRating, setSelectedRating] = useState<string | null>(null);
+
+  // Temporary filter values.
+  // These allow the user to select filters and then
+  // press APPLY before they affect the results.
+  const [pendingPrice, setPendingPrice] = useState<number | null>(null);
+
+  const [pendingRating, setPendingRating] = useState<string | null>(null);
 
   useEffect(() => {
     loadVenues();
@@ -41,11 +65,14 @@ export default function DiscoverScreen() {
 
     const { data, error } = await supabase
       .from("venues")
-      .select("id, name, neighborhood, rating, category, image_url")
+      .select(
+        "id, name, neighborhood, rating, category, image_url, price_level",
+      )
       .order("rating", { ascending: false });
 
     if (error) {
       console.log("Error loading venues:", error.message);
+
       setLoading(false);
       return;
     }
@@ -54,20 +81,107 @@ export default function DiscoverScreen() {
     setLoading(false);
   }
 
-  const filteredVenues = venues.filter((venue) => {
-    const search = searchText.trim().toLowerCase();
+  function openFilters() {
+    setPendingPrice(selectedPrice);
+    setPendingRating(selectedRating);
+    setFilterOpen(true);
+  }
 
-    const matchesSearch =
-      !search ||
-      venue.name.toLowerCase().includes(search) ||
-      venue.neighborhood?.toLowerCase().includes(search);
+  function applyFilters() {
+    setSelectedPrice(pendingPrice);
+    setSelectedRating(pendingRating);
+    setFilterOpen(false);
+  }
 
-    const matchesCategory =
-      selectedCategory === "ALL" ||
-      venue.category?.toUpperCase() === selectedCategory;
+  function clearFilters() {
+    setPendingPrice(null);
+    setPendingRating(null);
+    setSelectedPrice(null);
+    setSelectedRating(null);
+  }
 
-    return matchesSearch && matchesCategory;
-  });
+  function togglePrice(price: number) {
+    if (pendingPrice === price) {
+      setPendingPrice(null);
+    } else {
+      setPendingPrice(price);
+    }
+  }
+
+  function toggleRating(rating: string) {
+    if (pendingRating === rating) {
+      setPendingRating(null);
+    } else {
+      setPendingRating(rating);
+    }
+  }
+
+  const filteredVenues = useMemo(() => {
+    return venues.filter((venue) => {
+      const search = searchText.trim().toLowerCase();
+
+      /*
+       * SEARCH
+       */
+
+      const matchesSearch =
+        !search ||
+        venue.name.toLowerCase().includes(search) ||
+        venue.neighborhood?.toLowerCase().includes(search) ||
+        venue.category?.toLowerCase().includes(search);
+
+      /*
+       * CATEGORY
+       */
+
+      const matchesCategory =
+        selectedCategory === "ALL" ||
+        venue.category?.toUpperCase() === selectedCategory;
+
+      /*
+       * PRICE
+       *
+       * We support either:
+       * "$"
+       * "$$"
+       * "$$$"
+       * "$$$$"
+       *
+       * If your Supabase price_level is stored as
+       * a number instead, this also handles that.
+       */
+
+      let matchesPrice = true;
+
+      if (selectedPrice !== null) {
+        matchesPrice = Number(venue.price_level) === selectedPrice;
+      }
+      /*
+       * RATING
+       */
+
+      let matchesRating = true;
+
+      if (selectedRating && venue.rating !== null) {
+        const minimumRating = Number(selectedRating.replace("+", ""));
+
+        matchesRating = Number(venue.rating) >= minimumRating;
+      }
+
+      /*
+       * If a rating filter is selected and the venue
+       * has no rating, don't include it.
+       */
+
+      if (selectedRating && venue.rating === null) {
+        matchesRating = false;
+      }
+
+      return matchesSearch && matchesCategory && matchesPrice && matchesRating;
+    });
+  }, [venues, searchText, selectedCategory, selectedPrice, selectedRating]);
+
+  const activeFilterCount = (selectedPrice ? 1 : 0) + (selectedRating ? 1 : 0);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -104,7 +218,7 @@ export default function DiscoverScreen() {
             />
           </View>
 
-          {/* CATEGORIES */}
+          {/* CATEGORY FILTERS */}
 
           <ScrollView
             horizontal
@@ -133,18 +247,156 @@ export default function DiscoverScreen() {
             })}
           </ScrollView>
 
+          {/* FILTER BUTTON */}
+
+          <Pressable
+            style={[
+              styles.filterButton,
+              filterOpen && styles.filterButtonActive,
+            ]}
+            onPress={() => {
+              if (filterOpen) {
+                setFilterOpen(false);
+              } else {
+                openFilters();
+              }
+            }}
+          >
+            <Text
+              style={[
+                styles.filterButtonText,
+                filterOpen && styles.filterButtonTextActive,
+              ]}
+            >
+              FILTER
+            </Text>
+
+            {activeFilterCount > 0 && (
+              <View style={styles.filterCount}>
+                <Text style={styles.filterCountText}>{activeFilterCount}</Text>
+              </View>
+            )}
+
+            <Text
+              style={[
+                styles.filterChevron,
+                filterOpen && styles.filterChevronOpen,
+              ]}
+            >
+              ↓
+            </Text>
+          </Pressable>
+
+          {/* FILTER PANEL */}
+
+          {filterOpen && (
+            <View style={styles.filterPanel}>
+              {/* PRICE */}
+
+              <Text style={styles.filterHeading}>PRICE</Text>
+
+              <View style={styles.filterOptions}>
+                {priceOptions.map((price) => {
+                  const active = pendingPrice === price.value;
+
+                  return (
+                    <Pressable
+                      key={price.value}
+                      onPress={() => {
+                        if (pendingPrice === price.value) {
+                          setPendingPrice(null);
+                        } else {
+                          setPendingPrice(price.value);
+                        }
+                      }}
+                      style={[
+                        styles.filterOption,
+                        active && styles.filterOptionActive,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.filterOptionText,
+                          active && styles.filterOptionTextActive,
+                        ]}
+                      >
+                        {price.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              {/* RATING */}
+
+              <Text style={[styles.filterHeading, styles.ratingHeading]}>
+                RATING
+              </Text>
+
+              <View style={styles.filterOptions}>
+                {ratingOptions.map((rating) => {
+                  const active = pendingRating === rating;
+
+                  return (
+                    <Pressable
+                      key={rating}
+                      onPress={() => toggleRating(rating)}
+                      style={[
+                        styles.filterOption,
+                        active && styles.filterOptionActive,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.filterOptionText,
+                          active && styles.filterOptionTextActive,
+                        ]}
+                      >
+                        {rating}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              {/* DISTANCE */}
+
+              <Text style={[styles.filterHeading, styles.ratingHeading]}>
+                DISTANCE
+              </Text>
+
+              <View style={styles.distanceComingSoon}>
+                <Text style={styles.distanceComingSoonText}>
+                  DISTANCE FILTER COMING SOON
+                </Text>
+              </View>
+
+              {/* ACTIONS */}
+
+              <View style={styles.filterActions}>
+                <Pressable onPress={clearFilters} style={styles.clearButton}>
+                  <Text style={styles.clearButtonText}>CLEAR</Text>
+                </Pressable>
+
+                <Pressable onPress={applyFilters} style={styles.applyButton}>
+                  <Text style={styles.applyButtonText}>APPLY</Text>
+                </Pressable>
+              </View>
+            </View>
+          )}
+
           {/* SECTION HEADER */}
 
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>VENUES</Text>
+            <Text style={styles.sectionTitle}>ALL VENUES</Text>
 
             <Text style={styles.sectionCount}>
               {filteredVenues.length}{" "}
-              {filteredVenues.length === 1 ? "SPOT" : "SPOTS"}
+              {filteredVenues.length === 1 ? "VENUE" : "VENUES"}
             </Text>
           </View>
 
-          {/* CONTENT */}
+          {/* RESULTS */}
 
           {loading ? (
             <View style={styles.loadingContainer}>
@@ -154,11 +406,22 @@ export default function DiscoverScreen() {
             </View>
           ) : filteredVenues.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyTitle}>NO SPOTS FOUND</Text>
+              <Text style={styles.emptyTitle}>NO VENUES FOUND</Text>
 
               <Text style={styles.emptyText}>
-                Try another category, neighborhood, or search term.
+                Try changing your search or filters.
               </Text>
+
+              <Pressable
+                style={styles.emptyClear}
+                onPress={() => {
+                  setSearchText("");
+                  setSelectedCategory("ALL");
+                  clearFilters();
+                }}
+              >
+                <Text style={styles.emptyClearText}>CLEAR FILTERS</Text>
+              </Pressable>
             </View>
           ) : (
             filteredVenues.map((venue) => {
@@ -173,7 +436,9 @@ export default function DiscoverScreen() {
                   onPress={() =>
                     router.push({
                       pathname: "/venue",
-                      params: { id: venue.id },
+                      params: {
+                        id: venue.id,
+                      },
                     })
                   }
                 >
@@ -207,7 +472,7 @@ export default function DiscoverScreen() {
                     )}
                   </View>
 
-                  {/* VENUE INFORMATION */}
+                  {/* VENUE INFO */}
 
                   <View style={styles.venueInfo}>
                     <View style={styles.venueMain}>
@@ -218,6 +483,12 @@ export default function DiscoverScreen() {
                       <Text style={styles.neighborhood}>
                         {(venue.neighborhood ?? "NEW YORK").toUpperCase()}
                       </Text>
+
+                      {venue.price_level !== null && (
+                        <Text style={styles.priceText}>
+                          {"$".repeat(venue.price_level)}
+                        </Text>
+                      )}
                     </View>
 
                     <Text style={styles.arrow}>→</Text>
@@ -292,8 +563,6 @@ const styles = StyleSheet.create({
     paddingBottom: 110,
   },
 
-  /* HEADER */
-
   header: {
     marginBottom: 4,
   },
@@ -328,8 +597,6 @@ const styles = StyleSheet.create({
     fontFamily: "CormorantGaramond_500Medium",
   },
 
-  /* SEARCH */
-
   searchWrapper: {
     height: 54,
     backgroundColor: "#17141C",
@@ -356,8 +623,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: "CormorantGaramond_500Medium",
   },
-
-  /* CATEGORIES */
 
   categories: {
     paddingVertical: 20,
@@ -388,6 +653,163 @@ const styles = StyleSheet.create({
     color: "#C9A45C",
   },
 
+  /* FILTER BUTTON */
+
+  filterButton: {
+    height: 42,
+    borderWidth: 1,
+    borderColor: "#332E38",
+    backgroundColor: "#111016",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
+  },
+
+  filterButtonActive: {
+    borderColor: "#C9A45C",
+    backgroundColor: "#1A1710",
+  },
+
+  filterButtonText: {
+    color: "#96919B",
+    fontSize: 9,
+    letterSpacing: 2.2,
+  },
+
+  filterButtonTextActive: {
+    color: "#C9A45C",
+  },
+
+  filterChevron: {
+    color: "#77727C",
+    fontSize: 13,
+    marginLeft: 8,
+  },
+
+  filterChevronOpen: {
+    transform: [{ rotate: "180deg" }],
+    color: "#C9A45C",
+  },
+
+  filterCount: {
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: "#C9A45C",
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 8,
+  },
+
+  filterCountText: {
+    color: "#0B0A0F",
+    fontSize: 9,
+    fontWeight: "700",
+  },
+
+  /* FILTER PANEL */
+
+  filterPanel: {
+    backgroundColor: "#141219",
+    borderWidth: 1,
+    borderColor: "#29242F",
+    padding: 17,
+    marginTop: 10,
+    marginBottom: 14,
+  },
+
+  filterHeading: {
+    color: "#F5F1E8",
+    fontSize: 10,
+    letterSpacing: 2,
+    marginBottom: 10,
+  },
+
+  ratingHeading: {
+    marginTop: 20,
+  },
+
+  filterOptions: {
+    flexDirection: "row",
+    gap: 8,
+  },
+
+  filterOption: {
+    minWidth: 58,
+    height: 36,
+    borderWidth: 1,
+    borderColor: "#332E38",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 12,
+  },
+
+  filterOptionActive: {
+    borderColor: "#C9A45C",
+    backgroundColor: "#1A1710",
+  },
+
+  filterOptionText: {
+    color: "#77727C",
+    fontSize: 10,
+    letterSpacing: 1,
+  },
+
+  filterOptionTextActive: {
+    color: "#C9A45C",
+  },
+
+  distanceComingSoon: {
+    height: 36,
+    borderWidth: 1,
+    borderColor: "#29242F",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  distanceComingSoonText: {
+    color: "#5F5A64",
+    fontSize: 8,
+    letterSpacing: 1.4,
+  },
+
+  filterActions: {
+    flexDirection: "row",
+    gap: 9,
+    marginTop: 24,
+  },
+
+  clearButton: {
+    flex: 1,
+    height: 43,
+    borderWidth: 1,
+    borderColor: "#332E38",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  clearButtonText: {
+    color: "#77727C",
+    fontSize: 9,
+    letterSpacing: 1.8,
+  },
+
+  applyButton: {
+    flex: 1,
+    height: 43,
+    backgroundColor: "#C9A45C",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  applyButtonText: {
+    color: "#0B0A0F",
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 1.8,
+  },
+
   /* SECTION */
 
   sectionHeader: {
@@ -397,7 +819,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#29242F",
     paddingTop: 20,
-    marginTop: 3,
+    marginTop: 10,
     marginBottom: 16,
   },
 
@@ -458,20 +880,27 @@ const styles = StyleSheet.create({
 
   imageRating: {
     position: "absolute",
-    right: 15,
-    bottom: 13,
+    right: 14,
+    bottom: 12,
     flexDirection: "row",
     alignItems: "center",
+    backgroundColor: "rgba(11, 10, 15, 0.82)",
+    borderWidth: 1,
+    borderColor: "#C9A45C",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
 
   star: {
     color: "#D9B65E",
-    fontSize: 15,
+    fontSize: 18,
+    fontWeight: "600",
   },
 
   imageRatingText: {
     color: "#F5F1E8",
-    fontSize: 12,
+    fontSize: 16,
+    fontWeight: "600",
     marginLeft: 5,
     fontFamily: "CormorantGaramond_500Medium",
   },
@@ -503,6 +932,13 @@ const styles = StyleSheet.create({
     fontSize: 9,
     letterSpacing: 2,
     marginTop: 7,
+  },
+
+  priceText: {
+    color: "#C9A45C",
+    fontSize: 10,
+    letterSpacing: 1,
+    marginTop: 6,
   },
 
   arrow: {
@@ -548,11 +984,25 @@ const styles = StyleSheet.create({
     fontFamily: "CormorantGaramond_500Medium",
   },
 
+  emptyClear: {
+    borderWidth: 1,
+    borderColor: "#C9A45C",
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    marginTop: 18,
+  },
+
+  emptyClearText: {
+    color: "#C9A45C",
+    fontSize: 9,
+    letterSpacing: 1.7,
+  },
+
   bottomSpace: {
     height: 20,
   },
 
-  /* BOTTOM NAV */
+  /* BOTTOM NAVIGATION */
 
   bottomNav: {
     position: "absolute",
