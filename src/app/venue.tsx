@@ -1,15 +1,25 @@
+import {
+  CormorantGaramond_500Medium,
+  CormorantGaramond_600SemiBold,
+  useFonts,
+} from "@expo-google-fonts/cormorant-garamond";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
+  ImageBackground,
+  Linking,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+
 import { supabase } from "../../lib/supabase";
 
 type Venue = {
@@ -17,34 +27,21 @@ type Venue = {
   name: string;
   description: string | null;
   address: string | null;
+  neighborhood: string | null;
   city: string | null;
   state: string | null;
-  country: string | null;
-  neighborhood: string | null;
   price_level: number | null;
   rating: number | null;
+  image_url: string | null;
+  password: string | null;
 };
 
 type Review = {
   id: string;
   rating: number;
-  review_text: string | null;
+  comment: string | null;
   created_at: string;
-  profile: {
-    name: string | null;
-  } | null;
-};
-
-type SupabaseReview = {
-  id: string;
-  rating: number;
-  review_text: string | null;
-  created_at: string;
-  profile:
-    | {
-        name: string | null;
-      }[]
-    | null;
+  user_id: string;
 };
 
 export default function VenueScreen() {
@@ -52,9 +49,14 @@ export default function VenueScreen() {
 
   const [venue, setVenue] = useState<Venue | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [isSaved, setIsSaved] = useState(false);
+  const [imageFailed, setImageFailed] = useState(false);
+
+  const [fontsLoaded] = useFonts({
+    CormorantGaramond_500Medium,
+    CormorantGaramond_600SemiBold,
+  });
 
   useEffect(() => {
     if (id) {
@@ -63,98 +65,91 @@ export default function VenueScreen() {
   }, [id]);
 
   async function loadVenue() {
-    setLoading(true);
+    try {
+      setLoading(true);
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-    if (!user) {
-      console.log("No authenticated user found.");
-      setLoading(false);
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from("venues")
-      .select(
-        "id, name, description, address, city, state, country, neighborhood, price_level, rating",
-      )
-      .eq("id", id)
-      .single();
-
-    if (error) {
-      console.log("Error loading venue:", error.message);
-      setLoading(false);
-      return;
-    }
-
-    setVenue(data);
-
-    const { data: savedVenue, error: savedError } = await supabase
-      .from("saved_venues")
-      .select("id")
-      .eq("user_id", user.id)
-      .eq("venue_id", id)
-      .maybeSingle();
-
-    if (savedError) {
-      console.log("Error checking saved venue:", savedError.message);
-    }
-
-    setIsSaved(!!savedVenue);
-
-    const { data: reviewData, error: reviewError } = await supabase
-      .from("reviews")
-      .select(
-        `
-        id,
-        rating,
-        review_text,
-        created_at,
-        profile:profiles (
-          name
+      const { data: venueData, error: venueError } = await supabase
+        .from("venues")
+        .select(
+          `
+            id,
+            name,
+            description,
+            address,
+            neighborhood,
+            city,
+            state,
+            price_level,
+            rating,
+            image_url,
+            password
+          `,
         )
-      `,
-      )
-      .eq("venue_id", id)
-      .order("created_at", { ascending: false });
+        .eq("id", id)
+        .single();
 
-    if (reviewError) {
-      console.log("Error loading reviews:", reviewError.message);
-    } else {
-      const formattedReviews: Review[] = (
-        (reviewData as SupabaseReview[]) ?? []
-      ).map((review) => ({
-        id: review.id,
-        rating: review.rating,
-        review_text: review.review_text,
-        created_at: review.created_at,
-        profile: review.profile?.[0] ?? null,
-      }));
+      if (venueError) {
+        throw venueError;
+      }
 
-      setReviews(formattedReviews);
+      setVenue(venueData);
+      setImageFailed(false);
+
+      const { data: reviewData, error: reviewError } = await supabase
+        .from("reviews")
+        .select("*")
+        .eq("venue_id", id)
+        .order("created_at", {
+          ascending: false,
+        });
+
+      if (reviewError) {
+        console.error("Unable to load reviews:", reviewError);
+      }
+
+      setReviews(reviewData ?? []);
+
+      if (user) {
+        const { data: savedData, error: savedError } = await supabase
+          .from("saved_venues")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("venue_id", id)
+          .maybeSingle();
+
+        if (savedError) {
+          console.error("Unable to check saved venue:", savedError);
+        }
+
+        setSaved(!!savedData);
+      }
+    } catch (error) {
+      console.error("Venue loading error:", error);
+
+      Alert.alert(
+        "Unable to load venue",
+        "Something went wrong while loading this venue.",
+      );
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   }
 
-  async function toggleSave() {
-    if (!venue) return;
-
-    setSaving(true);
-
+  async function toggleSaved() {
     const {
       data: { user },
     } = await supabase.auth.getUser();
 
-    if (!user) {
-      Alert.alert("Login required", "Please log in to save venues.");
-      setSaving(false);
+    if (!user || !venue) {
+      Alert.alert("Sign in required", "Please sign in to save venues.");
       return;
     }
 
-    if (isSaved) {
+    if (saved) {
       const { error } = await supabase
         .from("saved_venues")
         .delete()
@@ -162,13 +157,11 @@ export default function VenueScreen() {
         .eq("venue_id", venue.id);
 
       if (error) {
-        console.log("Error removing saved venue:", error.message);
-        Alert.alert("Couldn't remove", error.message);
-        setSaving(false);
+        Alert.alert("Unable to remove", error.message);
         return;
       }
 
-      setIsSaved(false);
+      setSaved(false);
     } else {
       const { error } = await supabase.from("saved_venues").insert({
         user_id: user.id,
@@ -176,25 +169,78 @@ export default function VenueScreen() {
       });
 
       if (error) {
-        console.log("Error saving venue:", error.message);
-        Alert.alert("Couldn't save", error.message);
-        setSaving(false);
+        Alert.alert("Unable to save", error.message);
         return;
       }
 
-      setIsSaved(true);
+      setSaved(true);
     }
-
-    setSaving(false);
   }
 
-  if (loading) {
+  async function shareVenue() {
+    if (!venue) return;
+
+    try {
+      const location = [
+        venue.address,
+        venue.neighborhood,
+        venue.city,
+        venue.state,
+      ]
+        .filter(Boolean)
+        .join(", ");
+
+      await Share.share({
+        title: venue.name,
+        message: [
+          `Check out ${venue.name} on The Door.`,
+          location ? `\n${location}` : "",
+        ].join(""),
+      });
+    } catch (error) {
+      console.error("Share error:", error);
+    }
+  }
+
+  async function getDirections() {
+    if (!venue) return;
+
+    const address = [venue.address, venue.neighborhood, venue.city, venue.state]
+      .filter(Boolean)
+      .join(", ");
+
+    if (!address) {
+      Alert.alert(
+        "Address unavailable",
+        "This venue does not have an address yet.",
+      );
+      return;
+    }
+
+    const url =
+      "https://www.google.com/maps/search/?api=1&query=" +
+      encodeURIComponent(address);
+
+    try {
+      await Linking.openURL(url);
+    } catch (error) {
+      console.error("Unable to open directions:", error);
+    }
+  }
+
+  function priceDisplay(priceLevel: number | null) {
+    if (!priceLevel) {
+      return "—";
+    }
+
+    return "$".repeat(Math.min(Math.max(priceLevel, 1), 4));
+  }
+
+  if (!fontsLoaded || loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="small" color="#C9A45C" />
-
-          <Text style={styles.loadingText}>OPENING THE DOOR...</Text>
+        <View style={styles.loading}>
+          <Text style={styles.loadingText}>THE DOOR</Text>
         </View>
       </SafeAreaView>
     );
@@ -203,176 +249,220 @@ export default function VenueScreen() {
   if (!venue) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.content}>
+        <View style={styles.loading}>
+          <Text style={styles.errorText}>VENUE NOT FOUND</Text>
+
           <Pressable onPress={() => router.back()}>
-            <Text style={styles.back}>‹ BACK</Text>
+            <Text style={styles.backLink}>BACK</Text>
           </Pressable>
-
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyTitle}>VENUE NOT FOUND</Text>
-
-            <Text style={styles.emptyText}>
-              We couldn't find this spot in The Door.
-            </Text>
-          </View>
         </View>
       </SafeAreaView>
     );
   }
 
-  const location = [venue.neighborhood, venue.city, venue.state]
-    .filter(Boolean)
-    .join(", ");
-
-  const priceLevel =
-    venue.price_level !== null
-      ? "$".repeat(Math.max(1, Math.min(venue.price_level, 5)))
-      : "—";
-
-  const reviewAverage =
-    reviews.length > 0
-      ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
-      : null;
-
-  const displayedRating = reviewAverage !== null ? reviewAverage : venue.rating;
+  /*
+   * IMAGE LOGIC
+   *
+   * 1. If Supabase has an image_url, use it.
+   * 2. If there is no image_url, use the Door placeholder.
+   * 3. If the Supabase image fails, use the Door placeholder.
+   */
+  const venueImage =
+    venue.image_url?.trim() && !imageFailed
+      ? { uri: venue.image_url }
+      : require("../../assets/the_door_venue_placeholder.jpg");
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        <Pressable onPress={() => router.back()}>
-          <Text style={styles.back}>‹ BACK</Text>
-        </Pressable>
+        {/* =====================================================
+            HERO
+        ====================================================== */}
 
-        <View style={styles.image}>
-          <Text style={styles.imageText}>THE DOOR</Text>
-        </View>
-
-        <Text style={styles.eyebrow}>{venue.neighborhood ?? "NEW YORK"}</Text>
-
-        <Text style={styles.title}>{venue.name}</Text>
-
-        <View style={styles.ratingRow}>
-          {displayedRating !== null && (
-            <>
-              <Text style={styles.star}>★</Text>
-
-              <Text style={styles.rating}>
-                {Number(displayedRating).toFixed(1)}
-              </Text>
-            </>
-          )}
-
-          <Text style={styles.reviews}>
-            {reviews.length === 0
-              ? "NO REVIEWS YET"
-              : `${reviews.length} ${
-                  reviews.length === 1 ? "REVIEW" : "REVIEWS"
-                }`}
-          </Text>
-        </View>
-
-        <Text style={styles.description}>
-          {venue.description ??
-            "A destination waiting to be discovered behind the door."}
-        </Text>
-
-        <View style={styles.info}>
-          <View style={styles.infoBlock}>
-            <Text style={styles.label}>LOCATION</Text>
-
-            <Text style={styles.value}>{location || "NEW YORK"}</Text>
-
-            {venue.address && (
-              <Text style={styles.address}>{venue.address}</Text>
-            )}
-          </View>
-
-          <View style={styles.infoBlock}>
-            <Text style={styles.label}>PRICE</Text>
-
-            <Text style={styles.value}>{priceLevel}</Text>
-          </View>
-        </View>
-
-        <Pressable
-          style={[styles.saveButton, isSaved && styles.saveButtonActive]}
-          onPress={toggleSave}
-          disabled={saving}
-        >
-          {saving ? (
-            <ActivityIndicator
-              size="small"
-              color={isSaved ? "#C9A45C" : "#0B0A0F"}
-            />
-          ) : (
-            <Text
-              style={[
-                styles.saveButtonText,
-                isSaved && styles.saveButtonTextActive,
+        <View style={styles.hero}>
+          <ImageBackground
+            source={venueImage}
+            style={styles.heroImage}
+            imageStyle={styles.heroImageStyle}
+            onError={() => {
+              setImageFailed(true);
+            }}
+          >
+            <LinearGradient
+              colors={[
+                "rgba(0,0,0,0.15)",
+                "rgba(0,0,0,0.02)",
+                "rgba(8,7,9,0.94)",
               ]}
+              locations={[0, 0.48, 1]}
+              style={styles.heroGradient}
             >
-              {isSaved ? "SAVED ✓" : "SAVE VENUE"}
-            </Text>
+              <HeroTop
+                saved={saved}
+                onBack={() => router.back()}
+                onShare={shareVenue}
+                onSave={toggleSaved}
+              />
+
+              <HeroInformation venue={venue} reviewCount={reviews.length} />
+            </LinearGradient>
+          </ImageBackground>
+        </View>
+
+        {/* =====================================================
+            CONTENT
+        ====================================================== */}
+
+        <View style={styles.content}>
+          {/* DESCRIPTION */}
+
+          {venue.description && (
+            <Text style={styles.description}>{venue.description}</Text>
           )}
-        </Pressable>
 
-        <Pressable style={styles.button}>
-          <Text style={styles.buttonText}>GET DIRECTIONS</Text>
-        </Pressable>
+          {/* ===================================================
+              LOCATION / PRICE / PASSWORD
+          ==================================================== */}
 
-        <Pressable
-          style={styles.reviewButton}
-          onPress={() =>
-            router.push({
-              pathname: "/review",
-              params: {
-                id: venue.id,
-                venueName: venue.name,
-              },
-            })
-          }
-        >
-          <Text style={styles.reviewButtonText}>WRITE A REVIEW</Text>
-        </Pressable>
+          <View style={styles.infoRow}>
+            {/* LOCATION */}
 
-        <View style={styles.reviewsSection}>
+            <View style={styles.infoColumn}>
+              <Ionicons
+                name="location"
+                size={31}
+                color="#D7AD5A"
+                style={styles.infoIcon}
+              />
+
+              <Text style={styles.infoLabel}>LOCATION</Text>
+
+              <Text style={styles.infoValue}>
+                {venue.neighborhood || venue.city || "—"}
+              </Text>
+
+              {venue.address && (
+                <Text style={styles.infoSubValue}>{venue.address}</Text>
+              )}
+
+              {venue.city && (
+                <Text style={styles.infoSubValue}>
+                  {venue.city}
+                  {venue.state ? `, ${venue.state}` : ""}
+                </Text>
+              )}
+            </View>
+
+            <View style={styles.verticalDivider} />
+
+            {/* PRICE */}
+
+            <View style={styles.infoColumn}>
+              <Ionicons
+                name="cash-outline"
+                size={31}
+                color="#D7AD5A"
+                style={styles.infoIcon}
+              />
+
+              <Text style={styles.infoLabel}>PRICE</Text>
+
+              <Text style={styles.priceValue}>
+                {priceDisplay(venue.price_level)}
+              </Text>
+            </View>
+
+            <View style={styles.verticalDivider} />
+
+            {/* PASSWORD */}
+
+            <View style={styles.infoColumn}>
+              <Ionicons
+                name="key-outline"
+                size={31}
+                color="#D7AD5A"
+                style={styles.infoIcon}
+              />
+
+              <Text style={styles.infoLabel}>PASSWORD</Text>
+
+              <Text style={styles.infoValue}>
+                {venue.password || "Not listed"}
+              </Text>
+            </View>
+          </View>
+
+          {/* ===================================================
+              DIRECTIONS
+          ==================================================== */}
+
+          <Pressable
+            onPress={getDirections}
+            style={({ pressed }) => [
+              styles.directionsButton,
+              pressed && styles.pressed,
+            ]}
+          >
+            <Ionicons name="navigate" size={23} color="#D9B65E" />
+
+            <Text style={styles.directionsText}>GET DIRECTIONS</Text>
+          </Pressable>
+
+          {/* ===================================================
+              REVIEWS HEADER
+          ==================================================== */}
+
           <View style={styles.reviewHeader}>
             <Text style={styles.reviewTitle}>REVIEWS</Text>
 
             <Text style={styles.reviewCount}>{reviews.length}</Text>
           </View>
 
-          {reviews.length === 0 ? (
-            <View style={styles.noReviews}>
-              <Text style={styles.noReviewsTitle}>NO REVIEWS YET</Text>
+          {/* WRITE REVIEW */}
 
-              <Text style={styles.noReviewsText}>
-                Be the first to share your experience at this spot.
+          <View style={styles.reviewActionRow}>
+            <View />
+
+            <Pressable
+              onPress={() =>
+                router.push({
+                  pathname: "/review",
+                  params: {
+                    venueId: venue.id,
+                    venueName: venue.name,
+                  },
+                })
+              }
+              style={({ pressed }) => [
+                styles.writeReviewButton,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={styles.writeReviewText}>WRITE A REVIEW</Text>
+            </Pressable>
+          </View>
+
+          {/* ===================================================
+              REVIEWS
+          ==================================================== */}
+
+          {reviews.length === 0 ? (
+            <View style={styles.emptyReviews}>
+              <Text style={styles.emptyTitle}>BE THE FIRST</Text>
+
+              <Text style={styles.emptyText}>
+                Share your experience at {venue.name}.
               </Text>
             </View>
           ) : (
-            reviews.map((review) => (
-              <View key={review.id} style={styles.reviewCard}>
-                <View style={styles.reviewTop}>
-                  <Text style={styles.reviewerName}>
-                    {review.profile?.name ?? "THE DOOR MEMBER"}
-                  </Text>
-
-                  <View style={styles.reviewRating}>
-                    <Text style={styles.star}>★</Text>
-
-                    <Text style={styles.reviewRatingText}>{review.rating}</Text>
-                  </View>
-                </View>
-
-                {review.review_text && (
-                  <Text style={styles.reviewText}>{review.review_text}</Text>
-                )}
-              </View>
-            ))
+            <View style={styles.reviewList}>
+              {reviews.map((review) => (
+                <ReviewCard key={review.id} review={review} />
+              ))}
+            </View>
           )}
         </View>
       </ScrollView>
@@ -380,291 +470,472 @@ export default function VenueScreen() {
   );
 }
 
+/* =============================================================
+   HERO TOP
+============================================================= */
+
+function HeroTop({
+  saved,
+  onBack,
+  onShare,
+  onSave,
+}: {
+  saved: boolean;
+  onBack: () => void;
+  onShare: () => void;
+  onSave: () => void;
+}) {
+  return (
+    <View style={styles.heroTop}>
+      <Pressable onPress={onBack} style={styles.backButton} hitSlop={10}>
+        <Ionicons name="chevron-back" size={30} color="#F7F0DF" />
+
+        <Text style={styles.backText}>BACK</Text>
+      </Pressable>
+
+      <View style={styles.heroActions}>
+        <Pressable onPress={onShare} style={styles.iconButton} hitSlop={10}>
+          <Ionicons name="share-outline" size={31} color="#F7F0DF" />
+        </Pressable>
+
+        <Pressable onPress={onSave} style={styles.iconButton} hitSlop={10}>
+          <Ionicons
+            name={saved ? "heart" : "heart-outline"}
+            size={33}
+            color="#E7C875"
+          />
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+/* =============================================================
+   HERO INFORMATION
+============================================================= */
+
+function HeroInformation({
+  venue,
+  reviewCount,
+}: {
+  venue: Venue;
+  reviewCount: number;
+}) {
+  return (
+    <View style={styles.heroInformation}>
+      <Text style={styles.category}>
+        {venue.neighborhood?.toUpperCase() || "NIGHTLIFE"} ·{" "}
+        {venue.city?.toUpperCase() || "NEW YORK"}
+      </Text>
+
+      <Text style={styles.venueName}>{venue.name}</Text>
+
+      <View style={styles.heroGoldLine} />
+
+      <View style={styles.ratingRow}>
+        <Ionicons name="star" size={30} color="#E5BC5D" />
+
+        <Text style={styles.rating}>{venue.rating?.toFixed(1) || "—"}</Text>
+
+        <View style={styles.ratingDivider} />
+
+        <Text style={styles.reviewsLabel}>{reviewCount} REVIEWS</Text>
+      </View>
+    </View>
+  );
+}
+
+/* =============================================================
+   REVIEW CARD
+============================================================= */
+
+function ReviewCard({ review }: { review: Review }) {
+  const date = new Date(review.created_at).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+
+  const stars = Math.max(0, Math.min(review.rating, 5));
+
+  return (
+    <View style={styles.reviewCard}>
+      <View style={styles.reviewTop}>
+        <View>
+          <Text style={styles.reviewerName}>MEMBER</Text>
+
+          <Text style={styles.reviewDate}>{date.toUpperCase()}</Text>
+        </View>
+
+        <View style={styles.reviewRating}>
+          <Text style={styles.stars}>{"★".repeat(stars)}</Text>
+
+          <Text style={styles.ratingNumber}>{review.rating}</Text>
+        </View>
+      </View>
+
+      {review.comment && (
+        <Text style={styles.reviewComment}>{review.comment}</Text>
+      )}
+    </View>
+  );
+}
+
+/* =============================================================
+   STYLES
+============================================================= */
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0B0A0F",
-  },
-
-  reviewButton: {
-    height: 52,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "#C9A45C",
-    marginTop: 12,
-  },
-
-  reviewButtonText: {
-    color: "#C9A45C",
-    fontSize: 11,
-    fontWeight: "600",
-    letterSpacing: 1.5,
+    backgroundColor: "#09080C",
   },
 
   scrollContent: {
-    paddingHorizontal: 24,
-    paddingTop: 20,
-    paddingBottom: 50,
+    paddingBottom: 60,
   },
 
-  content: {
+  /* HERO */
+
+  hero: {
+    width: "100%",
+    height: 500,
+  },
+
+  heroImage: {
     flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 20,
   },
 
-  back: {
-    color: "#C9A45C",
-    fontSize: 11,
-    letterSpacing: 2,
-    marginBottom: 20,
+  heroImageStyle: {
+    resizeMode: "cover",
   },
 
-  image: {
-    height: 230,
-    backgroundColor: "#211D27",
+  heroGradient: {
+    flex: 1,
+    justifyContent: "space-between",
+  },
+
+  heroTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 25,
+    paddingHorizontal: 28,
+    paddingTop: 22,
   },
 
-  imageText: {
-    color: "#C9A45C",
+  backButton: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  backText: {
+    color: "#F7F0DF",
+    fontSize: 13,
+    letterSpacing: 4,
+    marginLeft: 4,
+  },
+
+  heroActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 25,
+  },
+
+  iconButton: {
+    padding: 3,
+  },
+
+  heroInformation: {
+    paddingHorizontal: 28,
+    paddingBottom: 30,
+  },
+
+  category: {
+    color: "#E2C477",
     fontSize: 11,
-    letterSpacing: 3,
+    letterSpacing: 3.5,
+    marginBottom: 12,
   },
 
-  eyebrow: {
-    color: "#C9A45C",
-    fontSize: 10,
-    letterSpacing: 2,
-    marginBottom: 10,
+  venueName: {
+    color: "#F8F3E9",
+    fontSize: 48,
+    lineHeight: 50,
+    fontFamily: "CormorantGaramond_500Medium",
   },
 
-  title: {
-    color: "#F5F1E8",
-    fontSize: 27,
-    fontWeight: "600",
-    letterSpacing: 1.5,
+  heroGoldLine: {
+    width: 135,
+    height: 3,
+    backgroundColor: "#DDB85F",
+    marginTop: 17,
+    marginBottom: 18,
   },
 
   ratingRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 12,
-  },
-
-  star: {
-    color: "#C9A45C",
-    fontSize: 14,
   },
 
   rating: {
-    color: "#F5F1E8",
-    fontSize: 14,
-    marginLeft: 5,
+    color: "#F7F0DF",
+    fontSize: 24,
+    marginLeft: 10,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
-  reviews: {
-    color: "#77727C",
-    fontSize: 9,
-    letterSpacing: 1,
-    marginLeft: 10,
+  ratingDivider: {
+    width: 1,
+    height: 34,
+    backgroundColor: "#8A806E",
+    marginHorizontal: 18,
+  },
+
+  reviewsLabel: {
+    color: "#F7F0DF",
+    fontSize: 11,
+    letterSpacing: 3,
+  },
+
+  /* CONTENT */
+
+  content: {
+    paddingHorizontal: 28,
   },
 
   description: {
-    color: "#96919B",
-    fontSize: 15,
-    lineHeight: 23,
-    marginTop: 24,
+    color: "#D0C9D0",
+    fontSize: 21,
+    lineHeight: 30,
+    marginTop: 30,
+    fontFamily: "CormorantGaramond_500Medium",
   },
 
-  info: {
+  /* INFO */
+
+  infoRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: "#29242F",
-    paddingVertical: 20,
-    marginTop: 25,
+    alignItems: "flex-start",
+    marginTop: 30,
+    paddingBottom: 26,
   },
 
-  infoBlock: {
+  infoColumn: {
     flex: 1,
+    minHeight: 0,
   },
 
-  label: {
-    color: "#77727C",
+  verticalDivider: {
+    width: 1,
+    height: 105,
+    backgroundColor: "#5C5860",
+    marginHorizontal: 16,
+  },
+
+  infoIcon: {
+    marginBottom: 10,
+  },
+
+  infoLabel: {
+    color: "#A29BA5",
     fontSize: 9,
-    letterSpacing: 1.5,
+    letterSpacing: 3,
     marginBottom: 7,
   },
 
-  value: {
-    color: "#F5F1E8",
-    fontSize: 13,
+  infoValue: {
+    color: "#F4EEE3",
+    fontSize: 17,
+    lineHeight: 22,
+    fontFamily: "CormorantGaramond_500Medium",
   },
 
-  address: {
-    color: "#77727C",
-    fontSize: 11,
-    marginTop: 5,
-    lineHeight: 16,
+  infoSubValue: {
+    color: "#F4EEE3",
+    fontSize: 14,
+    lineHeight: 19,
+    marginTop: 2,
+    fontFamily: "CormorantGaramond_500Medium",
   },
 
-  saveButton: {
-    height: 52,
+  priceValue: {
+    color: "#F4EEE3",
+    fontSize: 25,
+    letterSpacing: 1,
+    fontFamily: "CormorantGaramond_500Medium",
+  },
+
+  /* DIRECTIONS */
+
+  directionsButton: {
+    height: 64,
+    borderWidth: 2,
+    borderColor: "#D9B65E",
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "#C9A45C",
-    marginTop: 25,
+    gap: 25,
+    marginTop: 10,
   },
 
-  saveButtonActive: {
-    backgroundColor: "#1A1710",
-  },
-
-  saveButtonText: {
-    color: "#C9A45C",
+  directionsText: {
+    color: "#D9B65E",
     fontSize: 11,
+    letterSpacing: 4,
     fontWeight: "600",
-    letterSpacing: 1.5,
   },
 
-  saveButtonTextActive: {
-    color: "#C9A45C",
+  pressed: {
+    opacity: 0.65,
   },
 
-  button: {
-    backgroundColor: "#C9A45C",
-    height: 52,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 12,
-  },
-
-  buttonText: {
-    color: "#0B0A0F",
-    fontSize: 11,
-    fontWeight: "600",
-    letterSpacing: 1.5,
-  },
-
-  reviewsSection: {
-    marginTop: 40,
-  },
+  /* REVIEWS */
 
   reviewHeader: {
+    borderTopWidth: 1,
+    borderColor: "#5A555D",
+    marginTop: 35,
+    paddingTop: 25,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 15,
   },
 
   reviewTitle: {
-    color: "#F5F1E8",
-    fontSize: 12,
-    letterSpacing: 2,
+    color: "#F6F0E6",
+    fontSize: 26,
+    letterSpacing: 5,
+    fontFamily: "CormorantGaramond_500Medium",
   },
 
   reviewCount: {
-    color: "#C9A45C",
-    fontSize: 11,
+    color: "#F6F0E6",
+    fontSize: 23,
+    fontFamily: "CormorantGaramond_500Medium",
   },
 
-  noReviews: {
-    backgroundColor: "#17141C",
-    borderWidth: 1,
-    borderColor: "#29242F",
-    padding: 24,
+  reviewActionRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: -4,
+    marginBottom: 35,
+  },
+
+  writeReviewButton: {
+    width: 230,
+    height: 52,
+    borderWidth: 2,
+    borderColor: "#D9B65E",
     alignItems: "center",
+    justifyContent: "center",
   },
 
-  noReviewsTitle: {
-    color: "#C9A45C",
+  writeReviewText: {
+    color: "#D9B65E",
     fontSize: 10,
-    letterSpacing: 1.5,
+    letterSpacing: 3,
   },
 
-  noReviewsText: {
-    color: "#77727C",
-    fontSize: 13,
-    lineHeight: 20,
-    textAlign: "center",
-    marginTop: 8,
+  /* REVIEW CARDS */
+
+  reviewList: {
+    gap: 18,
   },
 
   reviewCard: {
-    backgroundColor: "#17141C",
     borderWidth: 1,
-    borderColor: "#29242F",
-    padding: 18,
-    marginBottom: 12,
+    borderColor: "#3E3A41",
+    paddingHorizontal: 28,
+    paddingVertical: 25,
+    minHeight: 150,
   },
 
   reviewTop: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
   },
 
   reviewerName: {
-    color: "#F5F1E8",
+    color: "#D9B65E",
+    fontSize: 12,
+    letterSpacing: 5,
+  },
+
+  reviewDate: {
+    color: "#F3EDE1",
     fontSize: 11,
-    letterSpacing: 1,
+    letterSpacing: 4,
+    marginTop: 10,
   },
 
   reviewRating: {
+    alignItems: "flex-end",
     flexDirection: "row",
+    gap: 12,
+  },
+
+  stars: {
+    color: "#DDB85F",
+    fontSize: 20,
+    letterSpacing: 3,
+  },
+
+  ratingNumber: {
+    color: "#F4EEE3",
+    fontSize: 17,
+  },
+
+  reviewComment: {
+    color: "#E5DED4",
+    fontSize: 18,
+    lineHeight: 27,
+    marginTop: 25,
+    fontFamily: "CormorantGaramond_500Medium",
+  },
+
+  /* EMPTY REVIEWS */
+
+  emptyReviews: {
     alignItems: "center",
+    paddingVertical: 50,
   },
 
-  reviewRatingText: {
-    color: "#F5F1E8",
+  emptyTitle: {
+    color: "#D9B65E",
     fontSize: 12,
-    marginLeft: 4,
+    letterSpacing: 4,
   },
 
-  reviewText: {
-    color: "#96919B",
-    fontSize: 14,
-    lineHeight: 21,
-    marginTop: 12,
+  emptyText: {
+    color: "#8C858E",
+    fontSize: 15,
+    marginTop: 10,
   },
 
-  loadingContainer: {
+  /* LOADING */
+
+  loading: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
   },
 
   loadingText: {
-    color: "#77727C",
-    fontSize: 9,
-    letterSpacing: 1.5,
-    marginTop: 12,
+    color: "#D9B65E",
+    fontSize: 26,
+    letterSpacing: 6,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
-  emptyContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 20,
+  errorText: {
+    color: "#F4EEE3",
+    fontSize: 18,
+    marginBottom: 20,
   },
 
-  emptyTitle: {
-    color: "#C9A45C",
+  backLink: {
+    color: "#D9B65E",
     fontSize: 12,
-    letterSpacing: 2,
-  },
-
-  emptyText: {
-    color: "#77727C",
-    fontSize: 13,
-    textAlign: "center",
-    marginTop: 10,
-    lineHeight: 20,
+    letterSpacing: 3,
   },
 });
