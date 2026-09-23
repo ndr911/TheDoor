@@ -256,12 +256,7 @@ export default function ProfileScreen() {
           <View style={styles.menu}>
             <Pressable
               style={styles.menuItem}
-              onPress={() => {
-                Alert.alert(
-                  "Edit Profile",
-                  "Profile editing can be connected here.",
-                );
-              }}
+              onPress={() => router.push("/edit-profile")}
             >
               <Text style={styles.menuText}>EDIT PROFILE</Text>
 
