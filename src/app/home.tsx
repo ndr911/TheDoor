@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
@@ -292,24 +293,28 @@ export default function HomeScreen() {
 
         {/* BOTTOM SPACING */}
 
-        <View style={{ height: 110 }} />
+        <View style={{ height: 120 }} />
       </ScrollView>
 
       {/* BOTTOM NAVIGATION */}
 
       <View style={styles.bottomNav}>
-        <NavItem icon="⌂" label="HOME" active onPress={() => {}} />
+        <NavItem icon="home" label="HOME" active onPress={() => {}} />
 
         <NavItem
-          icon="⌕"
+          icon="search"
           label="EXPLORE"
           onPress={() => router.push("/explore")}
         />
 
-        <NavItem icon="♡" label="SAVED" onPress={() => router.push("/saved")} />
+        <NavItem
+          icon="heart-outline"
+          label="SAVED"
+          onPress={() => router.push("/saved")}
+        />
 
         <NavItem
-          icon="○"
+          icon="person-outline"
           label="PROFILE"
           onPress={() => router.push("/profile")}
         />
@@ -431,7 +436,7 @@ function NavItem({
   active = false,
   onPress,
 }: {
-  icon: string;
+  icon: keyof typeof Ionicons.glyphMap;
   label: string;
   active?: boolean;
   onPress: () => void;
@@ -441,13 +446,16 @@ function NavItem({
       style={({ pressed }) => [styles.navItem, pressed && styles.navPressed]}
       onPress={onPress}
     >
-      <Text style={[styles.navIcon, active && styles.navActive]}>{icon}</Text>
+      <Ionicons
+        name={icon}
+        size={23}
+        color={active ? COLORS.gold : COLORS.muted}
+      />
 
       <Text style={[styles.navLabel, active && styles.navActive]}>{label}</Text>
     </Pressable>
   );
 }
-
 const styles = StyleSheet.create({
   /* ---------------------------------- */
   /* BASE */
@@ -873,6 +881,7 @@ const styles = StyleSheet.create({
     color: COLORS.muted,
     fontSize: 9,
     letterSpacing: 1.3,
+    marginTop: 5,
     fontFamily: "CormorantGaramond_600SemiBold",
   },
 

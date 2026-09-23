@@ -665,9 +665,7 @@ function ReviewCard({ review }: { review: Review }) {
     <View style={styles.reviewCard}>
       <View style={styles.reviewTop}>
         <View style={styles.reviewerInfo}>
-          <Text style={styles.reviewerName}>
-            {review.reviewer_name?.toUpperCase() || "MEMBER"}
-          </Text>
+          <Text style={styles.reviewerName}>MEMBER</Text>
 
           <Text style={styles.reviewDate}>{date.toUpperCase()}</Text>
         </View>
