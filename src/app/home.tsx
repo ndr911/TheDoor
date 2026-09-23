@@ -1,3 +1,4 @@
+import * as Location from "expo-location";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
@@ -16,14 +17,16 @@ const COLORS = {
   card: "#17141C",
   cardBorder: "#29242F",
   gold: "#C9A45C",
+  goldBright: "#D9B65E",
   text: "#F5F1E8",
   muted: "#96919B",
+  subtle: "#77727C",
   white: "#FFFFFF",
 };
 
 export default function HomeScreen() {
   const [userName, setUserName] = useState("THERE");
-
+  const [userLocation, setUserLocation] = useState("YOUR AREA");
   const [savedCount, setSavedCount] = useState(0);
   const [visitCount, setVisitCount] = useState(0);
   const [reviewCount, setReviewCount] = useState(0);
@@ -102,11 +105,61 @@ export default function HomeScreen() {
     }
 
     // Load top-rated venues
+    // Get the user's current location
+    const { status } = await Location.requestForegroundPermissionsAsync();
+
+    if (status !== "granted") {
+      console.log("Location permission not granted");
+      return;
+    }
+
+    const location = await Location.getCurrentPositionAsync({
+      accuracy: Location.Accuracy.Balanced,
+    });
+
+    const [address] = await Location.reverseGeocodeAsync({
+      latitude: location.coords.latitude,
+      longitude: location.coords.longitude,
+    });
+
+    const userZip = address?.postalCode;
+
+    const city = address?.city;
+
+    if (city) {
+      setUserLocation(city.toUpperCase());
+    }
+
+    if (!userZip) {
+      console.log("Could not determine current ZIP code");
+      return;
+    }
+
+    // Load top 2 venues in the user's ZIP code
     const { data: topVenueData, error: topVenueError } = await supabase
       .from("venues")
-      .select("id, name, neighborhood, rating, image_url")
-      .order("rating", { ascending: false })
+      .select("id, name, neighborhood, rating, image_url, zip_code")
+      .eq("zip_code", userZip)
+      .order("rating", { ascending: false, nullsFirst: false })
       .limit(2);
+
+    if (topVenueError) {
+      console.log("Error loading nearby top spots:", topVenueError.message);
+    } else {
+      console.log("Venues found for ZIP", userZip, topVenueData);
+
+      const formattedTopSpots = (topVenueData ?? []).map((venue) => ({
+        id: venue.id,
+        name: venue.name,
+        location: venue.neighborhood ?? "",
+        rating: venue.rating?.toString() ?? "0.0",
+        image:
+          venue.image_url ??
+          "https://images.unsplash.com/photo-1572116469696-31de0f17cc34?auto=format&fit=crop&w=900&q=80",
+      }));
+
+      setTopSpots(formattedTopSpots);
+    }
 
     if (topVenueError) {
       console.log("Error loading top spots:", topVenueError.message);
@@ -133,27 +186,36 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Header */}
+        {/* HEADER */}
+
         <View style={styles.header}>
-          <View>
-            <Text style={styles.eyebrow}>GOOD EVENING</Text>
+          <View style={styles.headerText}>
+            <Text style={styles.eyebrow}>THE DOOR IS OPEN</Text>
 
             <Text style={styles.welcome}>
               WELCOME INSIDE, {userName.toUpperCase()}.
             </Text>
 
-            <Text style={styles.location}>📍 New York City</Text>
+            <View style={styles.locationRow}>
+              <Text style={styles.locationDot}>●</Text>
+
+              <Text style={styles.location}>{userLocation}</Text>
+            </View>
           </View>
 
           <Pressable
-            style={styles.profileButton}
+            style={({ pressed }) => [
+              styles.profileButton,
+              pressed && styles.pressed,
+            ]}
             onPress={() => router.push("/profile")}
           >
             <Text style={styles.profileText}>{firstLetter}</Text>
           </Pressable>
         </View>
 
-        {/* Stats */}
+        {/* STATS */}
+
         <View style={styles.statsRow}>
           <StatCard icon="♡" number={savedCount.toString()} label="SAVED" />
 
@@ -162,8 +224,13 @@ export default function HomeScreen() {
           <StatCard icon="★" number={reviewCount.toString()} label="REVIEWS" />
         </View>
 
-        {/* Top Spots */}
-        <SectionHeader title="YOUR TOP SPOTS" action="VIEW ALL" />
+        {/* TOP SPOTS */}
+
+        <SectionHeader
+          title="TOP SPOTS NEAR YOU"
+          action="VIEW ALL"
+          onPress={() => router.push("/explore")}
+        />
 
         <ScrollView
           horizontal
@@ -182,10 +249,16 @@ export default function HomeScreen() {
           ))}
         </ScrollView>
 
-        {/* Featured */}
+        {/* FEATURED */}
+
         <SectionHeader title="FEATURED TONIGHT" action="SEE MORE" />
 
-        <Pressable style={styles.featuredCard}>
+        <Pressable
+          style={({ pressed }) => [
+            styles.featuredCard,
+            pressed && styles.featuredPressed,
+          ]}
+        >
           <Image
             source={{
               uri: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?auto=format&fit=crop&w=1200&q=80",
@@ -207,18 +280,23 @@ export default function HomeScreen() {
             </Text>
 
             <View style={styles.featuredBottom}>
-              <Text style={styles.rating}>★ 4.9</Text>
+              <View style={styles.featuredRating}>
+                <Text style={styles.featuredStar}>★</Text>
+                <Text style={styles.rating}>4.9</Text>
+              </View>
 
               <Text style={styles.price}>$$$</Text>
             </View>
           </View>
         </Pressable>
 
-        {/* Bottom spacing */}
+        {/* BOTTOM SPACING */}
+
         <View style={{ height: 110 }} />
       </ScrollView>
 
-      {/* Bottom Navigation */}
+      {/* BOTTOM NAVIGATION */}
+
       <View style={styles.bottomNav}>
         <NavItem icon="⌂" label="HOME" active onPress={() => {}} />
 
@@ -260,12 +338,27 @@ function StatCard({
   );
 }
 
-function SectionHeader({ title, action }: { title: string; action: string }) {
+function SectionHeader({
+  title,
+  action,
+  onPress,
+}: {
+  title: string;
+  action: string;
+  onPress?: () => void;
+}) {
   return (
     <View style={styles.sectionHeader}>
-      <Text style={styles.sectionTitle}>{title}</Text>
+      <View>
+        <Text style={styles.sectionTitle}>{title}</Text>
 
-      <Pressable>
+        <View style={styles.sectionAccent} />
+      </View>
+
+      <Pressable
+        onPress={onPress}
+        style={({ pressed }) => pressed && styles.actionPressed}
+      >
         <Text style={styles.sectionAction}>{action}</Text>
       </Pressable>
     </View>
@@ -287,7 +380,7 @@ function VenueCard({
 }) {
   return (
     <Pressable
-      style={styles.venueCard}
+      style={({ pressed }) => [styles.venueCard, pressed && styles.cardPressed]}
       onPress={() =>
         router.push({
           pathname: "/venue",
@@ -295,22 +388,36 @@ function VenueCard({
         })
       }
     >
-      <Image source={{ uri: image }} style={styles.venueImage} />
+      <View style={styles.venueImageContainer}>
+        <Image
+          source={{ uri: image }}
+          style={styles.venueImage}
+          resizeMode="cover"
+        />
 
-      <View style={styles.heartButton}>
-        <Text style={styles.heart}>♡</Text>
+        <View style={styles.imageOverlay} />
+
+        <View style={styles.heartButton}>
+          <Text style={styles.heart}>♡</Text>
+        </View>
+
+        <View style={styles.ratingBadge}>
+          <Text style={styles.ratingStar}>★</Text>
+
+          <Text style={styles.ratingBadgeText}>{rating}</Text>
+        </View>
       </View>
 
       <View style={styles.venueInfo}>
-        <Text style={styles.venueName}>{name}</Text>
+        <Text style={styles.venueName} numberOfLines={1}>
+          {name}
+        </Text>
 
-        <Text style={styles.venueLocation}>{location}</Text>
+        <Text style={styles.venueLocation} numberOfLines={1}>
+          {location || "NEW YORK"}
+        </Text>
 
         <View style={styles.venueMeta}>
-          <Text style={styles.rating}>★ {rating}</Text>
-
-          <Text style={styles.dot}>·</Text>
-
           <Text style={styles.metaText}>COCKTAIL BAR</Text>
         </View>
       </View>
@@ -330,7 +437,10 @@ function NavItem({
   onPress: () => void;
 }) {
   return (
-    <Pressable style={styles.navItem} onPress={onPress}>
+    <Pressable
+      style={({ pressed }) => [styles.navItem, pressed && styles.navPressed]}
+      onPress={onPress}
+    >
       <Text style={[styles.navIcon, active && styles.navActive]}>{icon}</Text>
 
       <Text style={[styles.navLabel, active && styles.navActive]}>{label}</Text>
@@ -339,48 +449,77 @@ function NavItem({
 }
 
 const styles = StyleSheet.create({
+  /* ---------------------------------- */
+  /* BASE */
+  /* ---------------------------------- */
+
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
   },
 
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 22,
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 30,
   },
+
+  /* ---------------------------------- */
+  /* HEADER */
+  /* ---------------------------------- */
 
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 25,
+    marginBottom: 28,
+  },
+
+  headerText: {
+    flex: 1,
+    paddingRight: 15,
   },
 
   eyebrow: {
     color: COLORS.gold,
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 2.5,
-    marginBottom: 9,
+    fontSize: 10,
+    letterSpacing: 3,
+    marginBottom: 10,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   welcome: {
     color: COLORS.text,
-    fontSize: 25,
-    fontWeight: "500",
-    letterSpacing: 0.5,
+    fontSize: 30,
+    lineHeight: 35,
+    letterSpacing: 1,
+    fontFamily: "CormorantGaramond_600SemiBold",
+  },
+
+  locationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 10,
+  },
+
+  locationDot: {
+    color: COLORS.gold,
+    fontSize: 6,
+    marginRight: 7,
   },
 
   location: {
     color: COLORS.muted,
-    fontSize: 13,
-    marginTop: 8,
+    fontSize: 12,
+    letterSpacing: 1.5,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   profileButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: COLORS.card,
     borderWidth: 1,
     borderColor: COLORS.gold,
     alignItems: "center",
@@ -389,13 +528,23 @@ const styles = StyleSheet.create({
 
   profileText: {
     color: COLORS.gold,
-    fontSize: 16,
+    fontSize: 20,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
+
+  pressed: {
+    opacity: 0.8,
+    transform: [{ scale: 0.96 }],
+  },
+
+  /* ---------------------------------- */
+  /* STATS */
+  /* ---------------------------------- */
 
   statsRow: {
     flexDirection: "row",
     gap: 10,
-    marginBottom: 32,
+    marginBottom: 36,
   },
 
   statCard: {
@@ -403,102 +552,173 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.card,
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
-    borderRadius: 12,
-    paddingVertical: 15,
+    borderRadius: 15,
+    paddingVertical: 16,
     alignItems: "center",
   },
 
   statIcon: {
     color: COLORS.gold,
-    fontSize: 19,
+    fontSize: 20,
     marginBottom: 5,
   },
 
   statNumber: {
     color: COLORS.text,
-    fontSize: 20,
-    fontWeight: "600",
+    fontSize: 23,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   statLabel: {
-    color: COLORS.muted,
+    color: COLORS.subtle,
     fontSize: 9,
-    fontWeight: "700",
-    letterSpacing: 1.5,
+    letterSpacing: 1.6,
     marginTop: 4,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
+
+  /* ---------------------------------- */
+  /* SECTION HEADERS */
+  /* ---------------------------------- */
 
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 14,
+    marginBottom: 16,
   },
 
   sectionTitle: {
     color: COLORS.text,
-    fontSize: 13,
-    fontWeight: "700",
-    letterSpacing: 1.8,
+    fontSize: 16,
+    letterSpacing: 2.5,
+    fontFamily: "CormorantGaramond_600SemiBold",
+  },
+
+  sectionAccent: {
+    width: 24,
+    height: 1,
+    backgroundColor: COLORS.gold,
+    marginTop: 6,
   },
 
   sectionAction: {
     color: COLORS.gold,
-    fontSize: 9,
-    fontWeight: "700",
-    letterSpacing: 1.3,
+    fontSize: 12,
+    letterSpacing: 1.7,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
+
+  actionPressed: {
+    opacity: 0.65,
+  },
+
+  /* ---------------------------------- */
+  /* TOP SPOTS */
+  /* ---------------------------------- */
 
   horizontalList: {
     gap: 14,
-    paddingBottom: 32,
+    paddingBottom: 34,
   },
 
   venueCard: {
-    width: 245,
+    width: 250,
     backgroundColor: COLORS.card,
-    borderRadius: 13,
+    borderRadius: 16,
     overflow: "hidden",
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
   },
 
+  cardPressed: {
+    opacity: 0.88,
+    transform: [{ scale: 0.985 }],
+  },
+
+  venueImageContainer: {
+    height: 155,
+    position: "relative",
+    backgroundColor: "#211D27",
+  },
+
   venueImage: {
     width: "100%",
-    height: 145,
+    height: "100%",
+  },
+
+  imageOverlay: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 65,
+    backgroundColor: "rgba(11, 10, 15, 0.16)",
   },
 
   heartButton: {
     position: "absolute",
-    right: 10,
-    top: 10,
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: "rgba(11,10,15,0.75)",
+    right: 11,
+    top: 11,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "rgba(11, 10, 15, 0.84)",
+    borderWidth: 1,
+    borderColor: "rgba(245, 241, 232, 0.15)",
     alignItems: "center",
     justifyContent: "center",
   },
 
   heart: {
     color: COLORS.white,
-    fontSize: 20,
+    fontSize: 22,
+    marginTop: -1,
+  },
+
+  ratingBadge: {
+    position: "absolute",
+    left: 11,
+    bottom: 11,
+    height: 36,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(11, 10, 15, 0.88)",
+    borderWidth: 1,
+    borderColor: COLORS.gold,
+    borderRadius: 11,
+    paddingHorizontal: 10,
+  },
+
+  ratingStar: {
+    color: COLORS.goldBright,
+    fontSize: 15,
+  },
+
+  ratingBadgeText: {
+    color: COLORS.text,
+    fontSize: 14,
+    marginLeft: 4,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   venueInfo: {
-    padding: 13,
+    padding: 15,
   },
 
   venueName: {
     color: COLORS.text,
-    fontSize: 16,
-    fontWeight: "600",
+    fontSize: 18,
+    letterSpacing: 1,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   venueLocation: {
-    color: COLORS.muted,
-    fontSize: 12,
-    marginTop: 4,
+    color: COLORS.subtle,
+    fontSize: 10,
+    letterSpacing: 1.2,
+    marginTop: 5,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   venueMeta: {
@@ -507,30 +727,30 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
 
-  rating: {
-    color: COLORS.gold,
-    fontSize: 12,
-    fontWeight: "600",
-  },
-
-  dot: {
-    color: COLORS.muted,
-    marginHorizontal: 7,
-  },
-
   metaText: {
     color: COLORS.muted,
     fontSize: 9,
-    letterSpacing: 1,
+    letterSpacing: 1.3,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
+  /* ---------------------------------- */
+  /* FEATURED */
+  /* ---------------------------------- */
+
   featuredCard: {
-    height: 260,
-    borderRadius: 15,
+    height: 270,
+    borderRadius: 17,
     overflow: "hidden",
     position: "relative",
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
+    backgroundColor: COLORS.card,
+  },
+
+  featuredPressed: {
+    opacity: 0.9,
+    transform: [{ scale: 0.99 }],
   },
 
   featuredImage: {
@@ -541,7 +761,7 @@ const styles = StyleSheet.create({
 
   featuredOverlay: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: "rgba(5,4,8,0.42)",
+    backgroundColor: "rgba(5, 4, 8, 0.46)",
   },
 
   featuredContent: {
@@ -553,43 +773,68 @@ const styles = StyleSheet.create({
   featuredBadge: {
     alignSelf: "flex-start",
     backgroundColor: COLORS.gold,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 3,
-    marginBottom: 10,
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+    borderRadius: 8,
+    marginBottom: 11,
   },
 
   featuredBadgeText: {
     color: COLORS.background,
-    fontSize: 8,
-    fontWeight: "800",
-    letterSpacing: 1.5,
+    fontSize: 9,
+    letterSpacing: 1.6,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   featuredTitle: {
     color: COLORS.white,
-    fontSize: 25,
-    fontWeight: "500",
-    letterSpacing: 1,
+    fontSize: 27,
+    letterSpacing: 1.2,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   featuredLocation: {
     color: "#D5D0D7",
-    fontSize: 12,
+    fontSize: 11,
+    letterSpacing: 0.7,
     marginTop: 5,
+    fontFamily: "CormorantGaramond_400Regular",
   },
 
   featuredBottom: {
     flexDirection: "row",
+    alignItems: "center",
     marginTop: 12,
-    gap: 14,
+  },
+
+  featuredRating: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  featuredStar: {
+    color: COLORS.goldBright,
+    fontSize: 16,
+    marginRight: 5,
+  },
+
+  rating: {
+    color: COLORS.white,
+    fontSize: 13,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   price: {
     color: COLORS.white,
-    fontSize: 12,
+    fontSize: 13,
     letterSpacing: 2,
+    marginLeft: 16,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
+
+  /* ---------------------------------- */
+  /* BOTTOM NAV */
+  /* ---------------------------------- */
 
   bottomNav: {
     position: "absolute",
@@ -610,6 +855,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     width: 80,
+    height: 58,
+  },
+
+  navPressed: {
+    opacity: 0.65,
+    transform: [{ scale: 0.94 }],
   },
 
   navIcon: {
@@ -620,9 +871,9 @@ const styles = StyleSheet.create({
 
   navLabel: {
     color: COLORS.muted,
-    fontSize: 8,
-    fontWeight: "700",
-    letterSpacing: 1,
+    fontSize: 9,
+    letterSpacing: 1.3,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   navActive: {
