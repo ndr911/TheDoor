@@ -34,6 +34,7 @@ type Venue = {
   rating: number | null;
   image_url: string | null;
   password: string | null;
+  website: string | null;
 };
 
 type Review = {
@@ -87,7 +88,8 @@ export default function VenueScreen() {
             price_level,
             rating,
             image_url,
-            password
+            password,
+            website
           `,
         )
         .eq("id", id)
@@ -303,6 +305,7 @@ export default function VenueScreen() {
             >
               <HeroTop
                 saved={saved}
+                website={venue.website}
                 onBack={() => router.back()}
                 onShare={shareVenue}
                 onSave={toggleSaved}
@@ -506,15 +509,38 @@ export default function VenueScreen() {
 
 function HeroTop({
   saved,
+  website,
   onBack,
   onShare,
   onSave,
 }: {
   saved: boolean;
+  website: string | null;
   onBack: () => void;
   onShare: () => void;
   onSave: () => void;
 }) {
+  async function openWebsite() {
+    if (!website) return;
+
+    let url = website.trim();
+
+    if (!/^https?:\/\//i.test(url)) {
+      url = `https://${url}`;
+    }
+
+    try {
+      await Linking.openURL(url);
+    } catch (error) {
+      console.error("Unable to open website:", error);
+
+      Alert.alert(
+        "Unable to open website",
+        "We couldn't open this venue's website.",
+      );
+    }
+  }
+
   return (
     <View style={styles.heroTop}>
       <Pressable onPress={onBack} style={styles.backButton} hitSlop={10}>
@@ -527,6 +553,16 @@ function HeroTop({
         <Pressable onPress={onShare} style={styles.iconButton} hitSlop={10}>
           <Ionicons name="share-outline" size={31} color="#F7F0DF" />
         </Pressable>
+
+        {website && (
+          <Pressable
+            onPress={openWebsite}
+            style={styles.iconButton}
+            hitSlop={10}
+          >
+            <Ionicons name="globe-outline" size={31} color="#E7C875" />
+          </Pressable>
+        )}
 
         <Pressable onPress={onSave} style={styles.iconButton} hitSlop={10}>
           <Ionicons
