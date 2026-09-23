@@ -649,8 +649,10 @@ function HeroInformation({
 /* =============================================================
    REVIEW CARD
 ============================================================= */
-
 function ReviewCard({ review }: { review: Review }) {
+  const [expanded, setExpanded] = useState(false);
+  const [isLongReview, setIsLongReview] = useState(false);
+
   const date = new Date(review.created_at).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
@@ -663,7 +665,9 @@ function ReviewCard({ review }: { review: Review }) {
     <View style={styles.reviewCard}>
       <View style={styles.reviewTop}>
         <View style={styles.reviewerInfo}>
-          <Text style={styles.reviewerName}>MEMBER</Text>
+          <Text style={styles.reviewerName}>
+            {review.reviewer_name?.toUpperCase() || "MEMBER"}
+          </Text>
 
           <Text style={styles.reviewDate}>{date.toUpperCase()}</Text>
         </View>
@@ -678,16 +682,48 @@ function ReviewCard({ review }: { review: Review }) {
       </View>
 
       {review.review_text ? (
-        <Text style={styles.reviewComment} numberOfLines={3}>
-          {review.review_text}
-        </Text>
+        <View style={styles.reviewTextContainer}>
+          {/* Invisible measurement copy */}
+          <Text
+            style={[styles.reviewComment, styles.reviewMeasurement]}
+            onTextLayout={(event) => {
+              setIsLongReview(event.nativeEvent.lines.length > 3);
+            }}
+          >
+            {review.review_text}
+          </Text>
+
+          {/* Actual review shown to the user */}
+          <Text
+            style={styles.reviewComment}
+            numberOfLines={expanded ? undefined : 3}
+          >
+            {review.review_text}
+          </Text>
+
+          {isLongReview && (
+            <Pressable
+              onPress={() => setExpanded((current) => !current)}
+              style={styles.expandReviewButton}
+            >
+              <Text style={styles.expandReviewText}>
+                {expanded ? "SHOW LESS" : "READ MORE"}
+              </Text>
+
+              <Ionicons
+                name={expanded ? "chevron-up" : "chevron-down"}
+                size={15}
+                color="#D9B65E"
+              />
+            </Pressable>
+          )}
+        </View>
       ) : (
         <Text style={styles.noReviewText}>No written review.</Text>
       )}
     </View>
   );
 }
-
 /* =============================================================
    STYLES
 ============================================================= */
@@ -1033,6 +1069,33 @@ const styles = StyleSheet.create({
     lineHeight: 23,
     marginTop: 13,
     fontFamily: "CormorantGaramond_500Medium",
+  },
+
+  expandReviewButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    marginTop: 10,
+    paddingVertical: 4,
+  },
+
+  expandReviewText: {
+    color: "#D9B65E",
+    fontSize: 9,
+    letterSpacing: 2,
+    fontWeight: "600",
+    marginRight: 6,
+  },
+
+  reviewTextContainer: {
+    position: "relative",
+  },
+
+  reviewMeasurement: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    opacity: 0,
   },
 
   noReviewText: {
