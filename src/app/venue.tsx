@@ -35,6 +35,7 @@ type Venue = {
   image_url: string | null;
   password: string | null;
   website: string | null;
+  reservation_url: string | null;
 };
 
 type Review = {
@@ -89,7 +90,8 @@ export default function VenueScreen() {
             rating,
             image_url,
             password,
-            website
+            website,
+            reservation_url
           `,
         )
         .eq("id", id)
@@ -414,6 +416,39 @@ export default function VenueScreen() {
 
             <Text style={styles.directionsText}>GET DIRECTIONS</Text>
           </Pressable>
+
+          {venue.reservation_url && (
+            <Pressable
+              onPress={async () => {
+                let url = venue.reservation_url?.trim();
+
+                if (!url) return;
+
+                if (!/^https?:\/\//i.test(url)) {
+                  url = `https://${url}`;
+                }
+
+                try {
+                  await Linking.openURL(url);
+                } catch (error) {
+                  console.error("Unable to open reservation website:", error);
+
+                  Alert.alert(
+                    "Unable to open reservations",
+                    "We couldn't open the reservation website.",
+                  );
+                }
+              }}
+              style={({ pressed }) => [
+                styles.reservationButton,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Ionicons name="calendar-outline" size={23} color="#0B0A0F" />
+
+              <Text style={styles.reservationText}>MAKE A RESERVATION</Text>
+            </Pressable>
+          )}
 
           {/* ===================================================
               REVIEWS HEADER
@@ -843,11 +878,21 @@ const styles = StyleSheet.create({
     height: 64,
     borderWidth: 2,
     borderColor: "#D9B65E",
+    borderRadius: 14, // added
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 25,
     marginTop: 10,
+
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 5,
+    },
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    elevation: 3,
   },
 
   directionsText: {
@@ -882,20 +927,8 @@ const styles = StyleSheet.create({
   },
 
   reviewCount: {
-    minWidth: 34,
-    height: 30,
-    paddingHorizontal: 9,
-
-    borderRadius: 15,
-    backgroundColor: "#1A1710",
-    borderWidth: 1,
-    borderColor: "#C9A45C",
-
     color: "#D9B65E",
-    fontSize: 13,
-    textAlign: "center",
-    textAlignVertical: "center",
-
+    fontSize: 28,
     fontFamily: "CormorantGaramond_600SemiBold",
   },
 
@@ -1077,5 +1110,33 @@ const styles = StyleSheet.create({
     color: "#D9B65E",
     fontSize: 12,
     letterSpacing: 3,
+  },
+  reservationButton: {
+    height: 64,
+    borderWidth: 1,
+    borderColor: "#C9A45C",
+    borderRadius: 14, // added
+    backgroundColor: "#C9A45C",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 25,
+    marginTop: 12,
+
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 5,
+    },
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+
+  reservationText: {
+    color: "#0B0A0F",
+    fontSize: 11,
+    letterSpacing: 4,
+    fontWeight: "600",
   },
 });
