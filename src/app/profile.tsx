@@ -14,10 +14,15 @@ import {
   Text,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { supabase } from "../../lib/supabase";
 
 export default function ProfileScreen() {
+  const insets = useSafeAreaInsets();
+
   const [fontsLoaded] = useFonts({
     CormorantGaramond_500Medium,
     CormorantGaramond_600SemiBold,
@@ -70,7 +75,6 @@ export default function ProfileScreen() {
 
       if (user.created_at) {
         const signupYear = new Date(user.created_at).getFullYear();
-
         setMemberSince(String(signupYear));
       }
 
@@ -178,8 +182,13 @@ export default function ProfileScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.screen}>
+    <View style={styles.container}>
+      {/* --------------------------------
+          MAIN CONTENT
+          Safe area only applies to top
+          -------------------------------- */}
+
+      <SafeAreaView style={styles.screen} edges={["top"]}>
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
@@ -218,7 +227,10 @@ export default function ProfileScreen() {
 
           <View style={styles.stats}>
             <Pressable
-              style={styles.stat}
+              style={({ pressed }) => [
+                styles.stat,
+                pressed && styles.statPressed,
+              ]}
               onPress={() => router.push("/saved")}
             >
               <Text style={styles.statNumber}>{savedCount ?? "—"}</Text>
@@ -252,14 +264,21 @@ export default function ProfileScreen() {
           {/* MENU */}
 
           <View style={styles.menu}>
+            {/* EDIT PROFILE */}
+
             <Pressable
-              style={styles.menuItem}
+              style={({ pressed }) => [
+                styles.menuItem,
+                pressed && styles.menuItemPressed,
+              ]}
               onPress={() => router.push("/edit-profile")}
             >
               <Text style={styles.menuText}>EDIT PROFILE</Text>
 
               <Text style={styles.arrow}>›</Text>
             </Pressable>
+
+            {/* MY REVIEWS */}
 
             <Pressable
               style={({ pressed }) => [
@@ -273,8 +292,13 @@ export default function ProfileScreen() {
               <Text style={styles.arrow}>›</Text>
             </Pressable>
 
+            {/* SAVED PLACES */}
+
             <Pressable
-              style={styles.menuItem}
+              style={({ pressed }) => [
+                styles.menuItem,
+                pressed && styles.menuItemPressed,
+              ]}
               onPress={() => router.push("/saved")}
             >
               <Text style={styles.menuText}>SAVED PLACES</Text>
@@ -282,86 +306,125 @@ export default function ProfileScreen() {
               <Text style={styles.arrow}>›</Text>
             </Pressable>
 
-            <Pressable
-              style={styles.menuItem}
-              onPress={() => {
-                Alert.alert("Settings", "Settings can be connected here.");
-              }}
-            >
-              <Text style={styles.menuText}>SETTINGS</Text>
-
-              <Text style={styles.arrow}>›</Text>
-            </Pressable>
+            {/* HELP & SUPPORT */}
 
             <Pressable
-              style={styles.menuItem}
-              onPress={() => {
-                Alert.alert(
-                  "Help & Support",
-                  "Help and support can be connected here.",
-                );
-              }}
+              style={({ pressed }) => [
+                styles.menuItem,
+                pressed && styles.menuItemPressed,
+              ]}
+              onPress={() => router.push("/support")}
             >
               <Text style={styles.menuText}>HELP & SUPPORT</Text>
 
               <Text style={styles.arrow}>›</Text>
             </Pressable>
+
+            {/* --------------------------------
+                SETTINGS
+                COMMENTED OUT FOR NOW
+                --------------------------------
+
+            <Pressable
+              style={({ pressed }) => [
+                styles.menuItem,
+                pressed && styles.menuItemPressed,
+              ]}
+              onPress={() => router.push("/settings")}
+            >
+              <Text style={styles.menuText}>
+                SETTINGS
+              </Text>
+
+              <Text style={styles.arrow}>
+                ›
+              </Text>
+            </Pressable>
+
+            -------------------------------- */}
           </View>
 
           {/* LOG OUT */}
 
-          <Pressable style={styles.logout} onPress={handleLogout}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.logout,
+              pressed && styles.menuItemPressed,
+            ]}
+            onPress={handleLogout}
+          >
             <Text style={styles.logoutText}>LOG OUT</Text>
           </Pressable>
         </ScrollView>
+      </SafeAreaView>
 
-        {/* BOTTOM NAVIGATION */}
+      {/* --------------------------------
+          BOTTOM NAVIGATION
 
-        <View style={styles.bottomNav}>
-          <Pressable
-            style={styles.navItem}
-            onPress={() => router.push("/home")}
-          >
-            <Text style={styles.navIcon}>⌂</Text>
+          IMPORTANT:
+          This is OUTSIDE SafeAreaView so
+          the background extends underneath
+          the iPhone bottom safe area.
+          -------------------------------- */}
 
-            <Text style={styles.navText}>HOME</Text>
-          </Pressable>
+      <View
+        style={[
+          styles.bottomNav,
+          {
+            height: 82 + insets.bottom,
+            paddingBottom: insets.bottom + 8,
+          },
+        ]}
+      >
+        {/* HOME */}
 
-          <Pressable
-            style={styles.navItem}
-            onPress={() => router.push("/explore")}
-          >
-            <Text style={styles.navIcon}>⌕</Text>
+        <Pressable style={styles.navItem} onPress={() => router.push("/home")}>
+          <Text style={styles.navIcon}>⌂</Text>
 
-            <Text style={styles.navText}>EXPLORE</Text>
-          </Pressable>
+          <Text style={styles.navText}>HOME</Text>
+        </Pressable>
 
-          <Pressable
-            style={styles.navItem}
-            onPress={() => router.push("/saved")}
-          >
-            <Text style={styles.navIcon}>♡</Text>
+        {/* EXPLORE */}
 
-            <Text style={styles.navText}>SAVED</Text>
-          </Pressable>
+        <Pressable
+          style={styles.navItem}
+          onPress={() => router.push("/explore")}
+        >
+          <Text style={styles.navIcon}>⌕</Text>
 
-          <Pressable
-            style={styles.navItem}
-            onPress={() => router.push("/profile")}
-          >
-            <View style={styles.activeNavIndicator} />
+          <Text style={styles.navText}>EXPLORE</Text>
+        </Pressable>
 
-            <Text style={styles.navIconActive}>○</Text>
+        {/* SAVED */}
 
-            <Text style={styles.navTextActive}>PROFILE</Text>
-          </Pressable>
-        </View>
+        <Pressable style={styles.navItem} onPress={() => router.push("/saved")}>
+          <Text style={styles.navIcon}>♡</Text>
+
+          <Text style={styles.navText}>SAVED</Text>
+        </Pressable>
+
+        {/* PROFILE */}
+
+        <Pressable
+          style={styles.navItem}
+          onPress={() => router.push("/profile")}
+        >
+          <View style={styles.activeNavIndicator} />
+
+          <Text style={styles.navIconActive}>○</Text>
+
+          <Text style={styles.navTextActive}>PROFILE</Text>
+        </Pressable>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  /* --------------------------------
+     MAIN
+     -------------------------------- */
+
   container: {
     flex: 1,
     backgroundColor: "#0B0A0F",
@@ -374,10 +437,15 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 24,
     paddingTop: 26,
-    paddingBottom: 120,
+
+    // Extra room so the last content can
+    // scroll above the bottom navigation.
+    paddingBottom: 140,
   },
 
-  /* HEADER */
+  /* --------------------------------
+     HEADER
+     -------------------------------- */
 
   header: {
     marginBottom: 28,
@@ -388,6 +456,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 4,
     marginBottom: 12,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   title: {
@@ -405,7 +474,9 @@ const styles = StyleSheet.create({
     marginTop: 13,
   },
 
-  /* PROFILE */
+  /* --------------------------------
+     PROFILE
+     -------------------------------- */
 
   profileCard: {
     flexDirection: "row",
@@ -435,11 +506,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  statPressed: {
-    opacity: 0.65,
-    transform: [{ scale: 0.97 }],
-  },
-
   name: {
     color: "#F5F1E8",
     fontSize: 27,
@@ -461,9 +527,12 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 2.5,
     marginTop: 5,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
-  /* STATS */
+  /* --------------------------------
+     STATS
+     -------------------------------- */
 
   stats: {
     flexDirection: "row",
@@ -479,6 +548,11 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
+  },
+
+  statPressed: {
+    opacity: 0.65,
+    transform: [{ scale: 0.97 }],
   },
 
   statDivider: {
@@ -499,9 +573,12 @@ const styles = StyleSheet.create({
     fontSize: 9,
     letterSpacing: 2.5,
     marginTop: 5,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
-  /* MENU */
+  /* --------------------------------
+     MENU
+     -------------------------------- */
 
   menu: {
     marginTop: 28,
@@ -514,6 +591,10 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     borderBottomWidth: 1,
     borderColor: "#29242F",
+  },
+
+  menuItemPressed: {
+    opacity: 0.65,
   },
 
   menuText: {
@@ -529,7 +610,9 @@ const styles = StyleSheet.create({
     fontFamily: "CormorantGaramond_500Medium",
   },
 
-  /* LOGOUT */
+  /* --------------------------------
+     LOG OUT
+     -------------------------------- */
 
   logout: {
     marginTop: 30,
@@ -541,9 +624,12 @@ const styles = StyleSheet.create({
     color: "#C9A45C",
     fontSize: 11,
     letterSpacing: 3,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
-  /* LOADING */
+  /* --------------------------------
+     LOADING
+     -------------------------------- */
 
   loadingContainer: {
     flex: 1,
@@ -560,25 +646,24 @@ const styles = StyleSheet.create({
     fontFamily: "CormorantGaramond_600SemiBold",
   },
 
-  menuItemPressed: {
-    opacity: 0.65,
-  },
-
-  /* BOTTOM NAV */
+  /* --------------------------------
+     BOTTOM NAVIGATION
+     -------------------------------- */
 
   bottomNav: {
     position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
-    height: 82,
+
     backgroundColor: "#111016",
+
     borderTopWidth: 1,
     borderTopColor: "#29242F",
+
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-around",
-    paddingBottom: 8,
   },
 
   navItem: {
@@ -606,6 +691,7 @@ const styles = StyleSheet.create({
     fontSize: 8,
     letterSpacing: 1.5,
     marginTop: 4,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   navTextActive: {
@@ -613,6 +699,7 @@ const styles = StyleSheet.create({
     fontSize: 8,
     letterSpacing: 1.5,
     marginTop: 4,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   activeNavIndicator: {
