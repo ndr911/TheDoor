@@ -3,6 +3,7 @@ import {
   CormorantGaramond_600SemiBold,
   useFonts,
 } from "@expo-google-fonts/cormorant-garamond";
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
@@ -14,15 +15,22 @@ import {
   Text,
   View,
 } from "react-native";
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase } from "../../lib/supabase";
 
-export default function ProfileScreen() {
-  const insets = useSafeAreaInsets();
+const COLORS = {
+  background: "#0B0A0F",
+  card: "#17141C",
+  cardBorder: "#29242F",
+  gold: "#C9A45C",
+  goldBright: "#D9B65E",
+  text: "#F5F1E8",
+  muted: "#96919B",
+  subtle: "#77727C",
+  white: "#FFFFFF",
+};
 
+export default function ProfileScreen() {
   const [fontsLoaded] = useFonts({
     CormorantGaramond_500Medium,
     CormorantGaramond_600SemiBold,
@@ -173,7 +181,7 @@ export default function ProfileScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="small" color="#C9A45C" />
+          <ActivityIndicator size="small" color={COLORS.gold} />
 
           <Text style={styles.loadingText}>OPENING THE DOOR...</Text>
         </View>
@@ -182,277 +190,235 @@ export default function ProfileScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      {/* --------------------------------
-          MAIN CONTENT
-          Safe area only applies to top
-          -------------------------------- */}
-
-      <SafeAreaView style={styles.screen} edges={["top"]}>
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-        >
-          {/* HEADER */}
-
-          <View style={styles.header}>
-            <Text style={styles.eyebrow}>THE DOOR</Text>
-
-            <Text style={styles.title}>PROFILE</Text>
-
-            <View style={styles.goldLine} />
-          </View>
-
-          {/* PROFILE */}
-
-          <View style={styles.profileCard}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{firstLetter}</Text>
-            </View>
-
-            <View style={styles.nameContainer}>
-              <Text style={styles.name} numberOfLines={1} adjustsFontSizeToFit>
-                {userName.toUpperCase()}
-              </Text>
-
-              <Text style={styles.email} numberOfLines={1}>
-                {userEmail}
-              </Text>
-
-              <Text style={styles.member}>MEMBER SINCE {memberSince}</Text>
-            </View>
-          </View>
-
-          {/* STATS */}
-
-          <View style={styles.stats}>
-            <Pressable
-              style={({ pressed }) => [
-                styles.stat,
-                pressed && styles.statPressed,
-              ]}
-              onPress={() => router.push("/saved")}
-            >
-              <Text style={styles.statNumber}>{savedCount ?? "—"}</Text>
-
-              <Text style={styles.statLabel}>SAVED</Text>
-            </Pressable>
-
-            <View style={styles.statDivider} />
-
-            <View style={styles.stat}>
-              <Text style={styles.statNumber}>{visitCount ?? "—"}</Text>
-
-              <Text style={styles.statLabel}>VISITS</Text>
-            </View>
-
-            <View style={styles.statDivider} />
-
-            <Pressable
-              style={({ pressed }) => [
-                styles.stat,
-                pressed && styles.statPressed,
-              ]}
-              onPress={() => router.push("/my-reviews")}
-            >
-              <Text style={styles.statNumber}>{reviewCount ?? "—"}</Text>
-
-              <Text style={styles.statLabel}>REVIEWS</Text>
-            </Pressable>
-          </View>
-
-          {/* MENU */}
-
-          <View style={styles.menu}>
-            {/* EDIT PROFILE */}
-
-            <Pressable
-              style={({ pressed }) => [
-                styles.menuItem,
-                pressed && styles.menuItemPressed,
-              ]}
-              onPress={() => router.push("/edit-profile")}
-            >
-              <Text style={styles.menuText}>EDIT PROFILE</Text>
-
-              <Text style={styles.arrow}>›</Text>
-            </Pressable>
-
-            {/* MY REVIEWS */}
-
-            <Pressable
-              style={({ pressed }) => [
-                styles.menuItem,
-                pressed && styles.menuItemPressed,
-              ]}
-              onPress={() => router.push("/my-reviews")}
-            >
-              <Text style={styles.menuText}>MY REVIEWS</Text>
-
-              <Text style={styles.arrow}>›</Text>
-            </Pressable>
-
-            {/* SAVED PLACES */}
-
-            <Pressable
-              style={({ pressed }) => [
-                styles.menuItem,
-                pressed && styles.menuItemPressed,
-              ]}
-              onPress={() => router.push("/saved")}
-            >
-              <Text style={styles.menuText}>SAVED PLACES</Text>
-
-              <Text style={styles.arrow}>›</Text>
-            </Pressable>
-
-            {/* HELP & SUPPORT */}
-
-            <Pressable
-              style={({ pressed }) => [
-                styles.menuItem,
-                pressed && styles.menuItemPressed,
-              ]}
-              onPress={() => router.push("/support")}
-            >
-              <Text style={styles.menuText}>HELP & SUPPORT</Text>
-
-              <Text style={styles.arrow}>›</Text>
-            </Pressable>
-
-            {/* --------------------------------
-                SETTINGS
-                COMMENTED OUT FOR NOW
-                --------------------------------
-
-            <Pressable
-              style={({ pressed }) => [
-                styles.menuItem,
-                pressed && styles.menuItemPressed,
-              ]}
-              onPress={() => router.push("/settings")}
-            >
-              <Text style={styles.menuText}>
-                SETTINGS
-              </Text>
-
-              <Text style={styles.arrow}>
-                ›
-              </Text>
-            </Pressable>
-
-            -------------------------------- */}
-          </View>
-
-          {/* LOG OUT */}
-
-          <Pressable
-            style={({ pressed }) => [
-              styles.logout,
-              pressed && styles.menuItemPressed,
-            ]}
-            onPress={handleLogout}
-          >
-            <Text style={styles.logoutText}>LOG OUT</Text>
-          </Pressable>
-        </ScrollView>
-      </SafeAreaView>
-
-      {/* --------------------------------
-          BOTTOM NAVIGATION
-
-          IMPORTANT:
-          This is OUTSIDE SafeAreaView so
-          the background extends underneath
-          the iPhone bottom safe area.
-          -------------------------------- */}
-
-      <View
-        style={[
-          styles.bottomNav,
-          {
-            height: 82 + insets.bottom,
-            paddingBottom: insets.bottom + 8,
-          },
-        ]}
+    <SafeAreaView style={styles.container}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
       >
-        {/* HOME */}
+        {/* HEADER */}
 
-        <Pressable style={styles.navItem} onPress={() => router.push("/home")}>
-          <Text style={styles.navIcon}>⌂</Text>
+        <View style={styles.header}>
+          <Text style={styles.eyebrow}>THE DOOR</Text>
 
-          <Text style={styles.navText}>HOME</Text>
-        </Pressable>
+          <Text style={styles.title}>PROFILE</Text>
 
-        {/* EXPLORE */}
-
-        <Pressable
-          style={styles.navItem}
-          onPress={() => router.push("/explore")}
-        >
-          <Text style={styles.navIcon}>⌕</Text>
-
-          <Text style={styles.navText}>EXPLORE</Text>
-        </Pressable>
-
-        {/* SAVED */}
-
-        <Pressable style={styles.navItem} onPress={() => router.push("/saved")}>
-          <Text style={styles.navIcon}>♡</Text>
-
-          <Text style={styles.navText}>SAVED</Text>
-        </Pressable>
+          <View style={styles.goldLine} />
+        </View>
 
         {/* PROFILE */}
 
+        <View style={styles.profileCard}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{firstLetter}</Text>
+          </View>
+
+          <View style={styles.nameContainer}>
+            <Text style={styles.name} numberOfLines={1} adjustsFontSizeToFit>
+              {userName.toUpperCase()}
+            </Text>
+
+            <Text style={styles.email} numberOfLines={1}>
+              {userEmail}
+            </Text>
+
+            <Text style={styles.member}>MEMBER SINCE {memberSince}</Text>
+          </View>
+        </View>
+
+        {/* STATS */}
+
+        <View style={styles.stats}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.stat,
+              pressed && styles.statPressed,
+            ]}
+            onPress={() => router.push("/saved")}
+          >
+            <Text style={styles.statNumber}>{savedCount ?? "—"}</Text>
+
+            <Text style={styles.statLabel}>SAVED</Text>
+          </Pressable>
+
+          <View style={styles.statDivider} />
+
+          <View style={styles.stat}>
+            <Text style={styles.statNumber}>{visitCount ?? "—"}</Text>
+
+            <Text style={styles.statLabel}>VISITS</Text>
+          </View>
+
+          <View style={styles.statDivider} />
+
+          <Pressable
+            style={({ pressed }) => [
+              styles.stat,
+              pressed && styles.statPressed,
+            ]}
+            onPress={() => router.push("/my-reviews")}
+          >
+            <Text style={styles.statNumber}>{reviewCount ?? "—"}</Text>
+
+            <Text style={styles.statLabel}>REVIEWS</Text>
+          </Pressable>
+        </View>
+
+        {/* MENU */}
+
+        <View style={styles.menu}>
+          {/* EDIT PROFILE */}
+
+          <Pressable
+            style={({ pressed }) => [
+              styles.menuItem,
+              pressed && styles.menuItemPressed,
+            ]}
+            onPress={() => router.push("/edit-profile")}
+          >
+            <Text style={styles.menuText}>EDIT PROFILE</Text>
+
+            <Text style={styles.arrow}>›</Text>
+          </Pressable>
+
+          {/* MY REVIEWS */}
+
+          <Pressable
+            style={({ pressed }) => [
+              styles.menuItem,
+              pressed && styles.menuItemPressed,
+            ]}
+            onPress={() => router.push("/my-reviews")}
+          >
+            <Text style={styles.menuText}>MY REVIEWS</Text>
+
+            <Text style={styles.arrow}>›</Text>
+          </Pressable>
+
+          {/* SAVED PLACES */}
+
+          <Pressable
+            style={({ pressed }) => [
+              styles.menuItem,
+              pressed && styles.menuItemPressed,
+            ]}
+            onPress={() => router.push("/saved")}
+          >
+            <Text style={styles.menuText}>SAVED PLACES</Text>
+
+            <Text style={styles.arrow}>›</Text>
+          </Pressable>
+
+          {/* HELP & SUPPORT */}
+
+          <Pressable
+            style={({ pressed }) => [
+              styles.menuItem,
+              pressed && styles.menuItemPressed,
+            ]}
+            onPress={() => router.push("/support")}
+          >
+            <Text style={styles.menuText}>HELP & SUPPORT</Text>
+
+            <Text style={styles.arrow}>›</Text>
+          </Pressable>
+        </View>
+
+        {/* LOG OUT */}
+
         <Pressable
-          style={styles.navItem}
-          onPress={() => router.push("/profile")}
+          style={({ pressed }) => [
+            styles.logout,
+            pressed && styles.menuItemPressed,
+          ]}
+          onPress={handleLogout}
         >
-          <View style={styles.activeNavIndicator} />
-
-          <Text style={styles.navIconActive}>○</Text>
-
-          <Text style={styles.navTextActive}>PROFILE</Text>
+          <Text style={styles.logoutText}>LOG OUT</Text>
         </Pressable>
+
+        {/* BOTTOM SPACING FOR NAV BAR */}
+        <View style={{ height: 120 }} />
+      </ScrollView>
+
+      {/* BOTTOM NAVIGATION */}
+
+      <View style={styles.bottomNav}>
+        <NavItem
+          icon="home-outline"
+          label="HOME"
+          onPress={() => router.push("/home")}
+        />
+
+        <NavItem
+          icon="search"
+          label="EXPLORE"
+          onPress={() => router.push("/explore")}
+        />
+
+        <NavItem
+          icon="heart-outline"
+          label="SAVED"
+          onPress={() => router.push("/saved")}
+        />
+
+        <NavItem icon="person" label="PROFILE" active onPress={() => {}} />
       </View>
-    </View>
+    </SafeAreaView>
+  );
+}
+
+function NavItem({
+  icon,
+  label,
+  active = false,
+  onPress,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  active?: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      style={({ pressed }) => [styles.navItem, pressed && styles.navPressed]}
+      onPress={onPress}
+    >
+      <Ionicons
+        name={icon}
+        size={23}
+        color={active ? COLORS.gold : COLORS.muted}
+      />
+
+      <Text style={[styles.navLabel, active && styles.navActive]}>{label}</Text>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  /* --------------------------------
-     MAIN
-     -------------------------------- */
+  /* ---------------------------------- */
+  /* MAIN */
+  /* ---------------------------------- */
 
   container: {
     flex: 1,
-    backgroundColor: "#0B0A0F",
-  },
-
-  screen: {
-    flex: 1,
+    backgroundColor: COLORS.background,
   },
 
   scrollContent: {
     paddingHorizontal: 24,
     paddingTop: 26,
-
-    // Extra room so the last content can
-    // scroll above the bottom navigation.
-    paddingBottom: 140,
+    paddingBottom: 30,
   },
 
-  /* --------------------------------
-     HEADER
-     -------------------------------- */
+  /* ---------------------------------- */
+  /* HEADER */
+  /* ---------------------------------- */
 
   header: {
     marginBottom: 28,
   },
 
   eyebrow: {
-    color: "#C9A45C",
+    color: COLORS.gold,
     fontSize: 10,
     letterSpacing: 4,
     marginBottom: 12,
@@ -460,7 +426,7 @@ const styles = StyleSheet.create({
   },
 
   title: {
-    color: "#F5F1E8",
+    color: COLORS.text,
     fontSize: 40,
     lineHeight: 43,
     letterSpacing: 2,
@@ -470,13 +436,13 @@ const styles = StyleSheet.create({
   goldLine: {
     width: 48,
     height: 1,
-    backgroundColor: "#C9A45C",
+    backgroundColor: COLORS.gold,
     marginTop: 13,
   },
 
-  /* --------------------------------
-     PROFILE
-     -------------------------------- */
+  /* ---------------------------------- */
+  /* PROFILE */
+  /* ---------------------------------- */
 
   profileCard: {
     flexDirection: "row",
@@ -488,16 +454,16 @@ const styles = StyleSheet.create({
     width: 76,
     height: 76,
     borderRadius: 38,
-    backgroundColor: "#17141C",
+    backgroundColor: COLORS.card,
     borderWidth: 1,
-    borderColor: "#C9A45C",
+    borderColor: COLORS.gold,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 18,
   },
 
   avatarText: {
-    color: "#D9B65E",
+    color: COLORS.goldBright,
     fontSize: 34,
     fontFamily: "CormorantGaramond_600SemiBold",
   },
@@ -507,7 +473,7 @@ const styles = StyleSheet.create({
   },
 
   name: {
-    color: "#F5F1E8",
+    color: COLORS.text,
     fontSize: 27,
     lineHeight: 30,
     letterSpacing: 1.5,
@@ -515,7 +481,7 @@ const styles = StyleSheet.create({
   },
 
   email: {
-    color: "#96919B",
+    color: COLORS.muted,
     fontSize: 14,
     lineHeight: 18,
     marginTop: 5,
@@ -523,16 +489,16 @@ const styles = StyleSheet.create({
   },
 
   member: {
-    color: "#77727C",
+    color: COLORS.subtle,
     fontSize: 10,
     letterSpacing: 2.5,
     marginTop: 5,
     fontFamily: "CormorantGaramond_600SemiBold",
   },
 
-  /* --------------------------------
-     STATS
-     -------------------------------- */
+  /* ---------------------------------- */
+  /* STATS */
+  /* ---------------------------------- */
 
   stats: {
     flexDirection: "row",
@@ -540,7 +506,7 @@ const styles = StyleSheet.create({
     marginTop: 32,
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: "#29242F",
+    borderColor: COLORS.cardBorder,
     paddingVertical: 20,
   },
 
@@ -557,28 +523,28 @@ const styles = StyleSheet.create({
 
   statDivider: {
     width: 1,
-    backgroundColor: "#29242F",
+    backgroundColor: COLORS.cardBorder,
     marginVertical: 3,
   },
 
   statNumber: {
-    color: "#F5F1E8",
+    color: COLORS.text,
     fontSize: 28,
     lineHeight: 31,
     fontFamily: "CormorantGaramond_500Medium",
   },
 
   statLabel: {
-    color: "#77727C",
+    color: COLORS.subtle,
     fontSize: 9,
     letterSpacing: 2.5,
     marginTop: 5,
     fontFamily: "CormorantGaramond_600SemiBold",
   },
 
-  /* --------------------------------
-     MENU
-     -------------------------------- */
+  /* ---------------------------------- */
+  /* MENU */
+  /* ---------------------------------- */
 
   menu: {
     marginTop: 28,
@@ -590,7 +556,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     borderBottomWidth: 1,
-    borderColor: "#29242F",
+    borderColor: COLORS.cardBorder,
   },
 
   menuItemPressed: {
@@ -598,21 +564,21 @@ const styles = StyleSheet.create({
   },
 
   menuText: {
-    color: "#F5F1E8",
+    color: COLORS.text,
     fontSize: 16,
     letterSpacing: 2,
     fontFamily: "CormorantGaramond_500Medium",
   },
 
   arrow: {
-    color: "#C9A45C",
+    color: COLORS.gold,
     fontSize: 27,
     fontFamily: "CormorantGaramond_500Medium",
   },
 
-  /* --------------------------------
-     LOG OUT
-     -------------------------------- */
+  /* ---------------------------------- */
+  /* LOG OUT */
+  /* ---------------------------------- */
 
   logout: {
     marginTop: 30,
@@ -621,92 +587,71 @@ const styles = StyleSheet.create({
   },
 
   logoutText: {
-    color: "#C9A45C",
+    color: COLORS.gold,
     fontSize: 11,
     letterSpacing: 3,
     fontFamily: "CormorantGaramond_600SemiBold",
   },
 
-  /* --------------------------------
-     LOADING
-     -------------------------------- */
+  /* ---------------------------------- */
+  /* LOADING */
+  /* ---------------------------------- */
 
   loadingContainer: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#0B0A0F",
+    backgroundColor: COLORS.background,
   },
 
   loadingText: {
-    color: "#D9B65E",
+    color: COLORS.goldBright,
     fontSize: 20,
     letterSpacing: 4,
     marginTop: 12,
     fontFamily: "CormorantGaramond_600SemiBold",
   },
 
-  /* --------------------------------
-     BOTTOM NAVIGATION
-     -------------------------------- */
+  /* ---------------------------------- */
+  /* BOTTOM NAVIGATION */
+  /* ---------------------------------- */
 
   bottomNav: {
     position: "absolute",
+    bottom: 0,
     left: 0,
     right: 0,
-    bottom: 0,
-
-    backgroundColor: "#111016",
-
+    height: 82,
+    backgroundColor: "#100E14",
     borderTopWidth: 1,
-    borderTopColor: "#29242F",
-
+    borderTopColor: COLORS.cardBorder,
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-around",
+    alignItems: "center",
+    paddingBottom: 8,
   },
 
   navItem: {
-    flex: 1,
-    height: 72,
     alignItems: "center",
     justifyContent: "center",
-    position: "relative",
+    width: 80,
+    height: 58,
   },
 
-  navIcon: {
-    color: "#77727C",
-    fontSize: 23,
-    lineHeight: 25,
+  navPressed: {
+    opacity: 0.65,
+    transform: [{ scale: 0.94 }],
   },
 
-  navIconActive: {
-    color: "#C9A45C",
-    fontSize: 23,
-    lineHeight: 25,
-  },
-
-  navText: {
-    color: "#77727C",
-    fontSize: 8,
-    letterSpacing: 1.5,
-    marginTop: 4,
+  navLabel: {
+    color: COLORS.muted,
+    fontSize: 9,
+    letterSpacing: 1.3,
+    marginTop: 5,
     fontFamily: "CormorantGaramond_600SemiBold",
   },
 
-  navTextActive: {
-    color: "#C9A45C",
-    fontSize: 8,
-    letterSpacing: 1.5,
-    marginTop: 4,
-    fontFamily: "CormorantGaramond_600SemiBold",
-  },
-
-  activeNavIndicator: {
-    position: "absolute",
-    top: 0,
-    width: 32,
-    height: 2,
-    backgroundColor: "#C9A45C",
+  navActive: {
+    color: COLORS.gold,
   },
 });
