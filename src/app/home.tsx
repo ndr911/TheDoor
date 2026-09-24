@@ -222,7 +222,17 @@ export default function HomeScreen() {
 
           <StatCard icon="✓" number={visitCount.toString()} label="VISITS" />
 
-          <StatCard icon="★" number={reviewCount.toString()} label="REVIEWS" />
+          <Pressable
+            style={({ pressed }) => [
+              styles.statCard,
+              pressed && styles.statCardPressed,
+            ]}
+            onPress={() => router.push("/my-reviews")}
+          >
+            <Text style={styles.statIcon}>★</Text>
+            <Text style={styles.statNumber}>{reviewCount}</Text>
+            <Text style={styles.statLabel}>REVIEWS</Text>
+          </Pressable>
         </View>
 
         {/* TOP SPOTS */}
@@ -532,6 +542,11 @@ const styles = StyleSheet.create({
     borderColor: COLORS.gold,
     alignItems: "center",
     justifyContent: "center",
+  },
+
+  statCardPressed: {
+    opacity: 0.7,
+    transform: [{ scale: 0.97 }],
   },
 
   profileText: {

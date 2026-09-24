@@ -237,13 +237,11 @@ export default function ProfileScreen() {
             <View style={styles.statDivider} />
 
             <Pressable
-              style={styles.stat}
-              onPress={() => {
-                Alert.alert(
-                  "MY REVIEWS",
-                  "Your review history will be available here.",
-                );
-              }}
+              style={({ pressed }) => [
+                styles.stat,
+                pressed && styles.statPressed,
+              ]}
+              onPress={() => router.push("/my-reviews")}
             >
               <Text style={styles.statNumber}>{reviewCount ?? "—"}</Text>
 
@@ -264,13 +262,11 @@ export default function ProfileScreen() {
             </Pressable>
 
             <Pressable
-              style={styles.menuItem}
-              onPress={() => {
-                Alert.alert(
-                  "My Reviews",
-                  "Your review history can be connected here.",
-                );
-              }}
+              style={({ pressed }) => [
+                styles.menuItem,
+                pressed && styles.menuItemPressed,
+              ]}
+              onPress={() => router.push("/my-reviews")}
             >
               <Text style={styles.menuText}>MY REVIEWS</Text>
 
@@ -439,6 +435,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
+  statPressed: {
+    opacity: 0.65,
+    transform: [{ scale: 0.97 }],
+  },
+
   name: {
     color: "#F5F1E8",
     fontSize: 27,
@@ -557,6 +558,10 @@ const styles = StyleSheet.create({
     letterSpacing: 4,
     marginTop: 12,
     fontFamily: "CormorantGaramond_600SemiBold",
+  },
+
+  menuItemPressed: {
+    opacity: 0.65,
   },
 
   /* BOTTOM NAV */
