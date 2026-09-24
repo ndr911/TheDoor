@@ -1,3 +1,8 @@
+import {
+  CormorantGaramond_500Medium,
+  CormorantGaramond_600SemiBold,
+  useFonts,
+} from "@expo-google-fonts/cormorant-garamond";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { router } from "expo-router";
@@ -27,7 +32,7 @@ const COLORS = {
   goldBright: "#D9B65E",
   cream: "#F5F1E8",
   muted: "#77727C",
-  mutedLight: "#96919B",
+  mutedLight: "#8A8492",
 };
 
 const categories = ["ALL", "COCKTAILS", "SPEAKEASIES", "ROOFTOPS"];
@@ -53,6 +58,11 @@ type Venue = {
 };
 
 export default function DiscoverScreen() {
+  const [fontsLoaded] = useFonts({
+    CormorantGaramond_500Medium,
+    CormorantGaramond_600SemiBold,
+  });
+
   const [venues, setVenues] = useState<Venue[]>([]);
   const [searchText, setSearchText] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("ALL");
@@ -67,7 +77,7 @@ export default function DiscoverScreen() {
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
 
-  // Temporary filter values.
+  // Temporary filter values
   const [pendingPrice, setPendingPrice] = useState<number | null>(null);
   const [pendingRating, setPendingRating] = useState<string | null>(null);
   const [pendingZip, setPendingZip] = useState<string | null>(null);
@@ -232,34 +242,38 @@ export default function DiscoverScreen() {
   const activeFilterCount =
     (selectedPrice ? 1 : 0) + (selectedRating ? 1 : 0) + (selectedZip ? 1 : 0);
 
+  if (!fontsLoaded) {
+    return null;
+  }
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
       <View style={styles.screen}>
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
           {/* HEADER */}
-
           <View style={styles.header}>
             <Text style={styles.eyebrow}>THE DOOR</Text>
-
             <Text style={styles.title}>EXPLORE</Text>
-
             <View style={styles.goldLine} />
-
             <Text style={styles.subtitle}>Find what's behind the door.</Text>
           </View>
 
           {/* SEARCH */}
-
           <View style={styles.searchWrapper}>
-            <Text style={styles.searchIcon}>⌕</Text>
+            <Ionicons
+              name="search"
+              size={18}
+              color={COLORS.gold}
+              style={styles.searchIcon}
+            />
 
             <TextInput
               style={styles.search}
               placeholder="Search bars, cocktails, neighborhoods..."
-              placeholderTextColor={COLORS.muted}
+              placeholderTextColor={COLORS.mutedLight}
               value={searchText}
               onChangeText={setSearchText}
               autoCapitalize="none"
@@ -268,7 +282,6 @@ export default function DiscoverScreen() {
           </View>
 
           {/* CATEGORY FILTERS */}
-
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -297,7 +310,6 @@ export default function DiscoverScreen() {
           </ScrollView>
 
           {/* FILTER BUTTON */}
-
           <Pressable
             style={[
               styles.filterButton,
@@ -337,13 +349,10 @@ export default function DiscoverScreen() {
           </Pressable>
 
           {/* FILTER PANEL */}
-
           {filterOpen && (
             <View style={styles.filterPanel}>
               {/* PRICE */}
-
               <Text style={styles.filterHeading}>PRICE</Text>
-
               <View style={styles.filterOptions}>
                 {priceOptions.map((price) => {
                   const active = pendingPrice === price.value;
@@ -371,11 +380,9 @@ export default function DiscoverScreen() {
               </View>
 
               {/* RATING */}
-
               <Text style={[styles.filterHeading, styles.ratingHeading]}>
                 RATING
               </Text>
-
               <View style={styles.filterOptions}>
                 {ratingOptions.map((rating) => {
                   const active = pendingRating === rating;
@@ -403,11 +410,9 @@ export default function DiscoverScreen() {
               </View>
 
               {/* LOCATION */}
-
               <Text style={[styles.filterHeading, styles.ratingHeading]}>
                 LOCATION
               </Text>
-
               <Pressable
                 style={[
                   styles.locationBar,
@@ -447,7 +452,6 @@ export default function DiscoverScreen() {
               )}
 
               {/* ACTIONS */}
-
               <View style={styles.filterActions}>
                 <Pressable onPress={clearFilters} style={styles.clearButton}>
                   <Text style={styles.clearButtonText}>CLEAR</Text>
@@ -461,10 +465,8 @@ export default function DiscoverScreen() {
           )}
 
           {/* SECTION HEADER */}
-
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>ALL VENUES</Text>
-
             <Text style={styles.sectionCount}>
               {filteredVenues.length}{" "}
               {filteredVenues.length === 1 ? "VENUE" : "VENUES"}
@@ -472,21 +474,17 @@ export default function DiscoverScreen() {
           </View>
 
           {/* RESULTS */}
-
           {loading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="small" color={COLORS.gold} />
-
               <Text style={styles.loadingText}>OPENING THE DOOR...</Text>
             </View>
           ) : filteredVenues.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyTitle}>NO VENUES FOUND</Text>
-
               <Text style={styles.emptyText}>
                 Try changing your search or filters.
               </Text>
-
               <Pressable
                 style={styles.emptyClear}
                 onPress={() => {
@@ -511,23 +509,17 @@ export default function DiscoverScreen() {
                   onPress={() =>
                     router.push({
                       pathname: "/venue",
-                      params: {
-                        id: venue.id,
-                      },
+                      params: { id: venue.id },
                     })
                   }
                 >
-                  {/* IMAGE */}
-
                   <View style={styles.imageContainer}>
                     <Image
                       source={venueImage}
                       style={styles.venueImage}
                       resizeMode="cover"
                     />
-
                     <View style={styles.imageOverlay} />
-
                     <View style={styles.imageLabel}>
                       <Text style={styles.imageLabelText}>
                         {venue.category
@@ -539,7 +531,6 @@ export default function DiscoverScreen() {
                     {venue.rating !== null && (
                       <View style={styles.imageRating}>
                         <Text style={styles.star}>★</Text>
-
                         <Text style={styles.imageRatingText}>
                           {Number(venue.rating).toFixed(1)}
                         </Text>
@@ -547,14 +538,11 @@ export default function DiscoverScreen() {
                     )}
                   </View>
 
-                  {/* VENUE INFO */}
-
                   <View style={styles.venueInfo}>
                     <View style={styles.venueMain}>
                       <Text style={styles.venueName} numberOfLines={2}>
                         {venue.name}
                       </Text>
-
                       <Text style={styles.neighborhood}>
                         {(venue.neighborhood ?? "NEW YORK").toUpperCase()}
                       </Text>
@@ -573,60 +561,58 @@ export default function DiscoverScreen() {
             })
           )}
 
-          <View style={styles.bottomSpace} />
+          {/* BOTTOM SPACING FOR NAV BAR */}
+          <View style={{ height: 80 }} />
         </ScrollView>
 
         {/* BOTTOM NAVIGATION */}
-
         <View style={styles.bottomNav}>
-          {/* HOME */}
-
-          <Pressable
-            style={styles.navItem}
+          <NavItem
+            icon="home-outline"
+            label="HOME"
             onPress={() => router.push("/home")}
-          >
-            <Ionicons name="home-outline" size={23} color={COLORS.muted} />
-
-            <Text style={styles.navText}>HOME</Text>
-          </Pressable>
-
-          {/* EXPLORE */}
-
-          <Pressable
-            style={styles.navItem}
-            onPress={() => router.push("/explore")}
-          >
-            <View style={styles.activeNavIndicator} />
-
-            <Ionicons name="search" size={23} color={COLORS.gold} />
-
-            <Text style={styles.navTextActive}>EXPLORE</Text>
-          </Pressable>
-
-          {/* SAVED */}
-
-          <Pressable
-            style={styles.navItem}
+          />
+          <NavItem icon="search" label="EXPLORE" active onPress={() => {}} />
+          <NavItem
+            icon="heart-outline"
+            label="SAVED"
             onPress={() => router.push("/saved")}
-          >
-            <Ionicons name="heart-outline" size={23} color={COLORS.muted} />
-
-            <Text style={styles.navText}>SAVED</Text>
-          </Pressable>
-
-          {/* PROFILE */}
-
-          <Pressable
-            style={styles.navItem}
+          />
+          <NavItem
+            icon="person-outline"
+            label="PROFILE"
             onPress={() => router.push("/profile")}
-          >
-            <Ionicons name="person-outline" size={23} color={COLORS.muted} />
-
-            <Text style={styles.navText}>PROFILE</Text>
-          </Pressable>
+          />
         </View>
       </View>
     </SafeAreaView>
+  );
+}
+
+function NavItem({
+  icon,
+  label,
+  active = false,
+  onPress,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  active?: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      style={({ pressed }) => [styles.navItem, pressed && styles.navPressed]}
+      onPress={onPress}
+    >
+      {active && <View style={styles.activeBar} />}
+      <Ionicons
+        name={icon}
+        size={22}
+        color={active ? COLORS.gold : COLORS.mutedLight}
+      />
+      <Text style={[styles.navLabel, active && styles.navActive]}>{label}</Text>
+    </Pressable>
   );
 }
 
@@ -643,11 +629,10 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 24,
     paddingTop: 24,
-    paddingBottom: 30,
+    paddingBottom: 20,
   },
 
   /* HEADER */
-
   header: {
     marginBottom: 4,
   },
@@ -657,6 +642,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 4,
     marginBottom: 12,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   title: {
@@ -683,59 +669,54 @@ const styles = StyleSheet.create({
   },
 
   /* SEARCH */
-
   searchWrapper: {
-    height: 54,
+    height: 52,
     backgroundColor: COLORS.surface,
     borderWidth: 1,
     borderColor: COLORS.border,
     flexDirection: "row",
     alignItems: "center",
     marginTop: 27,
+    paddingHorizontal: 15,
   },
 
   searchIcon: {
-    color: COLORS.gold,
-    fontSize: 26,
-    marginLeft: 15,
-    marginRight: 2,
-    transform: [{ rotate: "-15deg" }],
+    marginRight: 12,
   },
 
   search: {
     flex: 1,
     height: "100%",
-    paddingHorizontal: 10,
     color: COLORS.cream,
     fontSize: 14,
     fontFamily: "CormorantGaramond_500Medium",
   },
 
   /* CATEGORIES */
-
   categories: {
     paddingVertical: 20,
     gap: 9,
   },
 
   category: {
-    height: 34,
+    height: 36,
     borderWidth: 1,
     borderColor: COLORS.borderLight,
-    paddingHorizontal: 15,
+    paddingHorizontal: 16,
     alignItems: "center",
     justifyContent: "center",
   },
 
   categoryActive: {
     borderColor: COLORS.gold,
-    backgroundColor: "#1A1710",
+    backgroundColor: "transparent",
   },
 
   categoryText: {
     color: COLORS.muted,
-    fontSize: 9,
-    letterSpacing: 1.6,
+    fontSize: 10,
+    letterSpacing: 2,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   categoryTextActive: {
@@ -743,7 +724,6 @@ const styles = StyleSheet.create({
   },
 
   /* FILTER BUTTON */
-
   filterButton: {
     height: 42,
     borderWidth: 1,
@@ -764,6 +744,7 @@ const styles = StyleSheet.create({
     color: COLORS.mutedLight,
     fontSize: 9,
     letterSpacing: 2.2,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   filterButtonTextActive: {
@@ -794,11 +775,10 @@ const styles = StyleSheet.create({
   filterCountText: {
     color: COLORS.background,
     fontSize: 9,
-    fontWeight: "700",
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   /* FILTER PANEL */
-
   filterPanel: {
     backgroundColor: COLORS.card,
     borderWidth: 1,
@@ -813,6 +793,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 2,
     marginBottom: 10,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   ratingHeading: {
@@ -843,6 +824,7 @@ const styles = StyleSheet.create({
     color: COLORS.muted,
     fontSize: 10,
     letterSpacing: 1,
+    fontFamily: "CormorantGaramond_500Medium",
   },
 
   filterOptionTextActive: {
@@ -850,7 +832,6 @@ const styles = StyleSheet.create({
   },
 
   /* LOCATION */
-
   locationBar: {
     height: 64,
     borderWidth: 1,
@@ -879,6 +860,7 @@ const styles = StyleSheet.create({
     color: COLORS.cream,
     fontSize: 10,
     letterSpacing: 1.5,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   locationZip: {
@@ -886,11 +868,13 @@ const styles = StyleSheet.create({
     fontSize: 11,
     letterSpacing: 1.5,
     marginTop: 3,
+    fontFamily: "CormorantGaramond_500Medium",
   },
 
   locationArrow: {
     color: COLORS.gold,
     fontSize: 24,
+    fontFamily: "CormorantGaramond_500Medium",
   },
 
   locationError: {
@@ -898,10 +882,10 @@ const styles = StyleSheet.create({
     fontSize: 9,
     letterSpacing: 0.8,
     marginTop: 8,
+    fontFamily: "CormorantGaramond_500Medium",
   },
 
   /* FILTER ACTIONS */
-
   filterActions: {
     flexDirection: "row",
     gap: 9,
@@ -921,6 +905,7 @@ const styles = StyleSheet.create({
     color: COLORS.muted,
     fontSize: 9,
     letterSpacing: 1.8,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   applyButton: {
@@ -934,12 +919,11 @@ const styles = StyleSheet.create({
   applyButtonText: {
     color: COLORS.background,
     fontSize: 9,
-    fontWeight: "700",
     letterSpacing: 1.8,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   /* SECTION */
-
   sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -955,16 +939,17 @@ const styles = StyleSheet.create({
     color: COLORS.cream,
     fontSize: 12,
     letterSpacing: 3,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   sectionCount: {
     color: COLORS.gold,
     fontSize: 9,
     letterSpacing: 2,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   /* VENUE CARD */
-
   venueCard: {
     backgroundColor: COLORS.card,
     borderWidth: 1,
@@ -1004,6 +989,7 @@ const styles = StyleSheet.create({
     color: COLORS.goldBright,
     fontSize: 9,
     letterSpacing: 2.5,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   imageRating: {
@@ -1022,13 +1008,11 @@ const styles = StyleSheet.create({
   star: {
     color: COLORS.goldBright,
     fontSize: 18,
-    fontWeight: "600",
   },
 
   imageRatingText: {
     color: COLORS.cream,
     fontSize: 16,
-    fontWeight: "600",
     marginLeft: 5,
     fontFamily: "CormorantGaramond_500Medium",
   },
@@ -1051,6 +1035,7 @@ const styles = StyleSheet.create({
     color: COLORS.cream,
     fontSize: 21,
     lineHeight: 24,
+    letterSpacing: 1.5,
     fontFamily: "CormorantGaramond_500Medium",
     textTransform: "uppercase",
   },
@@ -1060,6 +1045,7 @@ const styles = StyleSheet.create({
     fontSize: 9,
     letterSpacing: 2,
     marginTop: 7,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   priceText: {
@@ -1067,16 +1053,16 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 1,
     marginTop: 6,
+    fontFamily: "CormorantGaramond_500Medium",
   },
 
   arrow: {
     color: COLORS.gold,
     fontSize: 23,
-    fontWeight: "200",
+    fontFamily: "CormorantGaramond_500Medium",
   },
 
   /* LOADING */
-
   loadingContainer: {
     alignItems: "center",
     paddingVertical: 50,
@@ -1087,10 +1073,10 @@ const styles = StyleSheet.create({
     fontSize: 9,
     letterSpacing: 2,
     marginTop: 12,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   /* EMPTY */
-
   emptyContainer: {
     alignItems: "center",
     paddingVertical: 55,
@@ -1101,6 +1087,7 @@ const styles = StyleSheet.create({
     color: COLORS.gold,
     fontSize: 12,
     letterSpacing: 3,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   emptyText: {
@@ -1124,58 +1111,53 @@ const styles = StyleSheet.create({
     color: COLORS.gold,
     fontSize: 9,
     letterSpacing: 1.7,
-  },
-
-  bottomSpace: {
-    height: 20,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   /* BOTTOM NAVIGATION */
-
   bottomNav: {
     position: "absolute",
+    bottom: 0,
     left: 0,
     right: 0,
-    bottom: 0,
-    height: 70,
-    backgroundColor: COLORS.background,
+    height: 65,
+    backgroundColor: "#100E14",
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-around",
-    paddingBottom: 0,
+    alignItems: "center",
   },
 
   navItem: {
-    flex: 1,
-    height: "100%",
     alignItems: "center",
     justifyContent: "center",
+    width: 70,
+    height: "100%",
     position: "relative",
   },
 
-  activeNavIndicator: {
+  activeBar: {
     position: "absolute",
     top: 0,
-    width: 28,
-    height: 1,
+    width: 32,
+    height: 2,
     backgroundColor: COLORS.gold,
   },
 
-  navText: {
-    color: COLORS.muted,
-    fontSize: 8,
+  navPressed: {
+    opacity: 0.7,
+  },
+
+  navLabel: {
+    color: COLORS.mutedLight,
+    fontSize: 9,
     letterSpacing: 1.5,
-    marginTop: 5,
+    marginTop: 4,
     fontFamily: "CormorantGaramond_600SemiBold",
   },
 
-  navTextActive: {
+  navActive: {
     color: COLORS.gold,
-    fontSize: 8,
-    letterSpacing: 1.5,
-    marginTop: 5,
-    fontFamily: "CormorantGaramond_600SemiBold",
   },
 });

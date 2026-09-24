@@ -218,8 +218,17 @@ export default function HomeScreen() {
         {/* STATS */}
 
         <View style={styles.statsRow}>
-          <StatCard icon="♡" number={savedCount.toString()} label="SAVED" />
-
+          <Pressable
+            style={({ pressed }) => [
+              styles.statCard,
+              pressed && styles.statCardPressed,
+            ]}
+            onPress={() => router.push("/saved")}
+          >
+            <Text style={styles.statIcon}>♡</Text>
+            <Text style={styles.statNumber}>{savedCount}</Text>
+            <Text style={styles.statLabel}>SAVED</Text>
+          </Pressable>
           <StatCard icon="✓" number={visitCount.toString()} label="VISITS" />
 
           <Pressable
@@ -262,13 +271,21 @@ export default function HomeScreen() {
 
         {/* FEATURED */}
 
-        <SectionHeader title="FEATURED TONIGHT" action="SEE MORE" />
+        <SectionHeader title="FEATURED TONIGHT" action="" />
 
         <Pressable
           style={({ pressed }) => [
             styles.featuredCard,
             pressed && styles.featuredPressed,
           ]}
+          onPress={() =>
+            router.push({
+              pathname: "/venue",
+              params: {
+                id: "9064676c-b884-4d0f-9f82-de3b65cebb0f",
+              },
+            })
+          }
         >
           <Image
             source={{
