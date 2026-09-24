@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
@@ -15,6 +16,19 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase } from "../../lib/supabase";
 
 const FALLBACK_IMAGE = require("../../assets/the_door_venue_placeholder.jpg");
+
+const COLORS = {
+  background: "#0B0A0F",
+  card: "#141219",
+  surface: "#17141C",
+  border: "#29242F",
+  borderLight: "#332E38",
+  gold: "#C9A45C",
+  goldBright: "#D9B65E",
+  cream: "#F5F1E8",
+  muted: "#77727C",
+  mutedLight: "#96919B",
+};
 
 const categories = ["ALL", "COCKTAILS", "SPEAKEASIES", "ROOFTOPS"];
 
@@ -44,22 +58,17 @@ export default function DiscoverScreen() {
   const [selectedCategory, setSelectedCategory] = useState("ALL");
 
   const [loading, setLoading] = useState(true);
-
   const [filterOpen, setFilterOpen] = useState(false);
 
   const [selectedPrice, setSelectedPrice] = useState<number | null>(null);
-  const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
   const [selectedRating, setSelectedRating] = useState<string | null>(null);
   const [selectedZip, setSelectedZip] = useState<string | null>(null);
-  const [userZip, setUserZip] = useState<string | null>(null);
+
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
 
   // Temporary filter values.
-  // These allow the user to select filters and then
-  // press APPLY before they affect the results.
   const [pendingPrice, setPendingPrice] = useState<number | null>(null);
-  const [pendingLocation, setPendingLocation] = useState<string | null>(null);
   const [pendingRating, setPendingRating] = useState<string | null>(null);
   const [pendingZip, setPendingZip] = useState<string | null>(null);
 
@@ -79,7 +88,6 @@ export default function DiscoverScreen() {
 
     if (error) {
       console.log("Error loading venues:", error.message);
-
       setLoading(false);
       return;
     }
@@ -118,7 +126,6 @@ export default function DiscoverScreen() {
         return;
       }
 
-      setUserZip(zip);
       setPendingZip(zip);
     } catch (error) {
       console.log("Error getting location:", error);
@@ -168,21 +175,9 @@ export default function DiscoverScreen() {
     }
   }
 
-  const locationOptions = useMemo(() => {
-    const locations = venues
-      .map((venue) => venue.neighborhood)
-      .filter((location): location is string => Boolean(location?.trim()));
-
-    return [...new Set(locations)].sort((a, b) => a.localeCompare(b));
-  }, [venues]);
-
   const filteredVenues = useMemo(() => {
     return venues.filter((venue) => {
       const search = searchText.trim().toLowerCase();
-
-      /*
-       * SEARCH
-       */
 
       const matchesSearch =
         !search ||
@@ -190,57 +185,31 @@ export default function DiscoverScreen() {
         venue.neighborhood?.toLowerCase().includes(search) ||
         venue.category?.toLowerCase().includes(search);
 
-      /*
-       * CATEGORY
-       */
-
       const matchesCategory =
         selectedCategory === "ALL" ||
         venue.category?.toUpperCase() === selectedCategory;
-
-      /*
-       * PRICE
-       *
-       * We support either:
-       * "$"
-       * "$$"
-       * "$$$"
-       * "$$$$"
-       *
-       * If your Supabase price_level is stored as
-       * a number instead, this also handles that.
-       */
 
       let matchesPrice = true;
 
       if (selectedPrice !== null) {
         matchesPrice = Number(venue.price_level) === selectedPrice;
       }
-      /*
-       * RATING
-       */
 
       let matchesRating = true;
 
       if (selectedRating && venue.rating !== null) {
         const minimumRating = Number(selectedRating.replace("+", ""));
-
         matchesRating = Number(venue.rating) >= minimumRating;
+      }
+
+      if (selectedRating && venue.rating === null) {
+        matchesRating = false;
       }
 
       let matchesLocation = true;
 
       if (selectedZip) {
         matchesLocation = venue.zip_code === selectedZip;
-      }
-
-      /*
-       * If a rating filter is selected and the venue
-       * has no rating, don't include it.
-       */
-
-      if (selectedRating && venue.rating === null) {
-        matchesRating = false;
       }
 
       return (
@@ -290,7 +259,7 @@ export default function DiscoverScreen() {
             <TextInput
               style={styles.search}
               placeholder="Search bars, cocktails, neighborhoods..."
-              placeholderTextColor="#77727C"
+              placeholderTextColor={COLORS.muted}
               value={searchText}
               onChangeText={setSearchText}
               autoCapitalize="none"
@@ -382,13 +351,7 @@ export default function DiscoverScreen() {
                   return (
                     <Pressable
                       key={price.value}
-                      onPress={() => {
-                        if (pendingPrice === price.value) {
-                          setPendingPrice(null);
-                        } else {
-                          setPendingPrice(price.value);
-                        }
-                      }}
+                      onPress={() => togglePrice(price.value)}
                       style={[
                         styles.filterOption,
                         active && styles.filterOptionActive,
@@ -439,10 +402,6 @@ export default function DiscoverScreen() {
                 })}
               </View>
 
-              {/* DISTANCE */}
-
-              {/* LOCATION */}
-
               {/* LOCATION */}
 
               <Text style={[styles.filterHeading, styles.ratingHeading]}>
@@ -458,7 +417,12 @@ export default function DiscoverScreen() {
                 disabled={locationLoading}
               >
                 <View style={styles.locationBarLeft}>
-                  <Text style={styles.locationIcon}>⌖</Text>
+                  <Ionicons
+                    name="location-outline"
+                    size={22}
+                    color={COLORS.gold}
+                    style={styles.locationIcon}
+                  />
 
                   <View>
                     <Text style={styles.locationBarLabel}>
@@ -511,7 +475,7 @@ export default function DiscoverScreen() {
 
           {loading ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="small" color="#C9A45C" />
+              <ActivityIndicator size="small" color={COLORS.gold} />
 
               <Text style={styles.loadingText}>OPENING THE DOOR...</Text>
             </View>
@@ -615,14 +579,18 @@ export default function DiscoverScreen() {
         {/* BOTTOM NAVIGATION */}
 
         <View style={styles.bottomNav}>
+          {/* HOME */}
+
           <Pressable
             style={styles.navItem}
             onPress={() => router.push("/home")}
           >
-            <Text style={styles.navIcon}>⌂</Text>
+            <Ionicons name="home-outline" size={23} color={COLORS.muted} />
 
             <Text style={styles.navText}>HOME</Text>
           </Pressable>
+
+          {/* EXPLORE */}
 
           <Pressable
             style={styles.navItem}
@@ -630,25 +598,29 @@ export default function DiscoverScreen() {
           >
             <View style={styles.activeNavIndicator} />
 
-            <Text style={styles.navIconActive}>⌕</Text>
+            <Ionicons name="search" size={23} color={COLORS.gold} />
 
             <Text style={styles.navTextActive}>EXPLORE</Text>
           </Pressable>
+
+          {/* SAVED */}
 
           <Pressable
             style={styles.navItem}
             onPress={() => router.push("/saved")}
           >
-            <Text style={styles.navIcon}>♡</Text>
+            <Ionicons name="heart-outline" size={23} color={COLORS.muted} />
 
             <Text style={styles.navText}>SAVED</Text>
           </Pressable>
+
+          {/* PROFILE */}
 
           <Pressable
             style={styles.navItem}
             onPress={() => router.push("/profile")}
           >
-            <Text style={styles.navIcon}>○</Text>
+            <Ionicons name="person-outline" size={23} color={COLORS.muted} />
 
             <Text style={styles.navText}>PROFILE</Text>
           </Pressable>
@@ -661,88 +633,34 @@ export default function DiscoverScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0B0A0F",
+    backgroundColor: COLORS.background,
   },
 
   screen: {
     flex: 1,
   },
 
-  locationBar: {
-    height: 64,
-    borderWidth: 1,
-    borderColor: "#29242F",
-    backgroundColor: "#17141C",
-    paddingHorizontal: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-
-  locationBarActive: {
-    borderColor: "#C9A45C",
-  },
-
-  locationBarLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-
-  locationIcon: {
-    color: "#C9A45C",
-    fontSize: 22,
-    marginRight: 12,
-  },
-
-  locationBarLabel: {
-    color: "#F5F1E8",
-    fontSize: 10,
-    letterSpacing: 1.5,
-  },
-
-  locationZip: {
-    color: "#C9A45C",
-    fontSize: 11,
-    letterSpacing: 1.5,
-    marginTop: 3,
-  },
-
-  locationArrow: {
-    color: "#C9A45C",
-    fontSize: 24,
-  },
-
-  locationError: {
-    color: "#77727C",
-    fontSize: 9,
-    letterSpacing: 0.8,
-    marginTop: 8,
-  },
-
-  locationOptions: {
-    gap: 8,
-    paddingRight: 8,
-  },
-
   scrollContent: {
     paddingHorizontal: 24,
-    paddingTop: 26,
-    paddingBottom: 110,
+    paddingTop: 24,
+    paddingBottom: 30,
   },
+
+  /* HEADER */
 
   header: {
     marginBottom: 4,
   },
 
   eyebrow: {
-    color: "#C9A45C",
+    color: COLORS.gold,
     fontSize: 10,
     letterSpacing: 4,
     marginBottom: 12,
   },
 
   title: {
-    color: "#F5F1E8",
+    color: COLORS.cream,
     fontSize: 40,
     lineHeight: 43,
     letterSpacing: 2,
@@ -752,30 +670,32 @@ const styles = StyleSheet.create({
   goldLine: {
     width: 48,
     height: 1,
-    backgroundColor: "#C9A45C",
+    backgroundColor: COLORS.gold,
     marginTop: 13,
     marginBottom: 14,
   },
 
   subtitle: {
-    color: "#96919B",
+    color: COLORS.mutedLight,
     fontSize: 15,
     lineHeight: 21,
     fontFamily: "CormorantGaramond_500Medium",
   },
 
+  /* SEARCH */
+
   searchWrapper: {
     height: 54,
-    backgroundColor: "#17141C",
+    backgroundColor: COLORS.surface,
     borderWidth: 1,
-    borderColor: "#29242F",
+    borderColor: COLORS.border,
     flexDirection: "row",
     alignItems: "center",
     marginTop: 27,
   },
 
   searchIcon: {
-    color: "#C9A45C",
+    color: COLORS.gold,
     fontSize: 26,
     marginLeft: 15,
     marginRight: 2,
@@ -786,10 +706,12 @@ const styles = StyleSheet.create({
     flex: 1,
     height: "100%",
     paddingHorizontal: 10,
-    color: "#F5F1E8",
+    color: COLORS.cream,
     fontSize: 14,
     fontFamily: "CormorantGaramond_500Medium",
   },
+
+  /* CATEGORIES */
 
   categories: {
     paddingVertical: 20,
@@ -799,25 +721,25 @@ const styles = StyleSheet.create({
   category: {
     height: 34,
     borderWidth: 1,
-    borderColor: "#332E38",
+    borderColor: COLORS.borderLight,
     paddingHorizontal: 15,
     alignItems: "center",
     justifyContent: "center",
   },
 
   categoryActive: {
-    borderColor: "#C9A45C",
+    borderColor: COLORS.gold,
     backgroundColor: "#1A1710",
   },
 
   categoryText: {
-    color: "#77727C",
+    color: COLORS.muted,
     fontSize: 9,
     letterSpacing: 1.6,
   },
 
   categoryTextActive: {
-    color: "#C9A45C",
+    color: COLORS.gold,
   },
 
   /* FILTER BUTTON */
@@ -825,7 +747,7 @@ const styles = StyleSheet.create({
   filterButton: {
     height: 42,
     borderWidth: 1,
-    borderColor: "#332E38",
+    borderColor: COLORS.borderLight,
     backgroundColor: "#111016",
     flexDirection: "row",
     alignItems: "center",
@@ -834,43 +756,43 @@ const styles = StyleSheet.create({
   },
 
   filterButtonActive: {
-    borderColor: "#C9A45C",
+    borderColor: COLORS.gold,
     backgroundColor: "#1A1710",
   },
 
   filterButtonText: {
-    color: "#96919B",
+    color: COLORS.mutedLight,
     fontSize: 9,
     letterSpacing: 2.2,
   },
 
   filterButtonTextActive: {
-    color: "#C9A45C",
+    color: COLORS.gold,
   },
 
   filterChevron: {
-    color: "#77727C",
+    color: COLORS.muted,
     fontSize: 13,
     marginLeft: 8,
   },
 
   filterChevronOpen: {
     transform: [{ rotate: "180deg" }],
-    color: "#C9A45C",
+    color: COLORS.gold,
   },
 
   filterCount: {
     minWidth: 18,
     height: 18,
     borderRadius: 9,
-    backgroundColor: "#C9A45C",
+    backgroundColor: COLORS.gold,
     alignItems: "center",
     justifyContent: "center",
     marginLeft: 8,
   },
 
   filterCountText: {
-    color: "#0B0A0F",
+    color: COLORS.background,
     fontSize: 9,
     fontWeight: "700",
   },
@@ -878,16 +800,16 @@ const styles = StyleSheet.create({
   /* FILTER PANEL */
 
   filterPanel: {
-    backgroundColor: "#141219",
+    backgroundColor: COLORS.card,
     borderWidth: 1,
-    borderColor: "#29242F",
+    borderColor: COLORS.border,
     padding: 17,
     marginTop: 10,
     marginBottom: 14,
   },
 
   filterHeading: {
-    color: "#F5F1E8",
+    color: COLORS.cream,
     fontSize: 10,
     letterSpacing: 2,
     marginBottom: 10,
@@ -906,40 +828,79 @@ const styles = StyleSheet.create({
     minWidth: 58,
     height: 36,
     borderWidth: 1,
-    borderColor: "#332E38",
+    borderColor: COLORS.borderLight,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 12,
   },
 
   filterOptionActive: {
-    borderColor: "#C9A45C",
+    borderColor: COLORS.gold,
     backgroundColor: "#1A1710",
   },
 
   filterOptionText: {
-    color: "#77727C",
+    color: COLORS.muted,
     fontSize: 10,
     letterSpacing: 1,
   },
 
   filterOptionTextActive: {
-    color: "#C9A45C",
+    color: COLORS.gold,
   },
 
-  distanceComingSoon: {
-    height: 36,
+  /* LOCATION */
+
+  locationBar: {
+    height: 64,
     borderWidth: 1,
-    borderColor: "#29242F",
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surface,
+    paddingHorizontal: 16,
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "space-between",
   },
 
-  distanceComingSoonText: {
-    color: "#5F5A64",
-    fontSize: 8,
-    letterSpacing: 1.4,
+  locationBarActive: {
+    borderColor: COLORS.gold,
   },
+
+  locationBarLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  locationIcon: {
+    marginRight: 12,
+  },
+
+  locationBarLabel: {
+    color: COLORS.cream,
+    fontSize: 10,
+    letterSpacing: 1.5,
+  },
+
+  locationZip: {
+    color: COLORS.gold,
+    fontSize: 11,
+    letterSpacing: 1.5,
+    marginTop: 3,
+  },
+
+  locationArrow: {
+    color: COLORS.gold,
+    fontSize: 24,
+  },
+
+  locationError: {
+    color: COLORS.muted,
+    fontSize: 9,
+    letterSpacing: 0.8,
+    marginTop: 8,
+  },
+
+  /* FILTER ACTIONS */
 
   filterActions: {
     flexDirection: "row",
@@ -951,13 +912,13 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 43,
     borderWidth: 1,
-    borderColor: "#332E38",
+    borderColor: COLORS.borderLight,
     alignItems: "center",
     justifyContent: "center",
   },
 
   clearButtonText: {
-    color: "#77727C",
+    color: COLORS.muted,
     fontSize: 9,
     letterSpacing: 1.8,
   },
@@ -965,13 +926,13 @@ const styles = StyleSheet.create({
   applyButton: {
     flex: 1,
     height: 43,
-    backgroundColor: "#C9A45C",
+    backgroundColor: COLORS.gold,
     alignItems: "center",
     justifyContent: "center",
   },
 
   applyButtonText: {
-    color: "#0B0A0F",
+    color: COLORS.background,
     fontSize: 9,
     fontWeight: "700",
     letterSpacing: 1.8,
@@ -984,20 +945,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     borderTopWidth: 1,
-    borderTopColor: "#29242F",
+    borderTopColor: COLORS.border,
     paddingTop: 20,
     marginTop: 10,
     marginBottom: 16,
   },
 
   sectionTitle: {
-    color: "#F5F1E8",
+    color: COLORS.cream,
     fontSize: 12,
     letterSpacing: 3,
   },
 
   sectionCount: {
-    color: "#C9A45C",
+    color: COLORS.gold,
     fontSize: 9,
     letterSpacing: 2,
   },
@@ -1005,9 +966,9 @@ const styles = StyleSheet.create({
   /* VENUE CARD */
 
   venueCard: {
-    backgroundColor: "#141219",
+    backgroundColor: COLORS.card,
     borderWidth: 1,
-    borderColor: "#29242F",
+    borderColor: COLORS.border,
     marginBottom: 18,
     overflow: "hidden",
   },
@@ -1040,7 +1001,7 @@ const styles = StyleSheet.create({
   },
 
   imageLabelText: {
-    color: "#D9B65E",
+    color: COLORS.goldBright,
     fontSize: 9,
     letterSpacing: 2.5,
   },
@@ -1053,19 +1014,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "rgba(11, 10, 15, 0.82)",
     borderWidth: 1,
-    borderColor: "#C9A45C",
+    borderColor: COLORS.gold,
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
 
   star: {
-    color: "#D9B65E",
+    color: COLORS.goldBright,
     fontSize: 18,
     fontWeight: "600",
   },
 
   imageRatingText: {
-    color: "#F5F1E8",
+    color: COLORS.cream,
     fontSize: 16,
     fontWeight: "600",
     marginLeft: 5,
@@ -1087,7 +1048,7 @@ const styles = StyleSheet.create({
   },
 
   venueName: {
-    color: "#F5F1E8",
+    color: COLORS.cream,
     fontSize: 21,
     lineHeight: 24,
     fontFamily: "CormorantGaramond_500Medium",
@@ -1095,21 +1056,21 @@ const styles = StyleSheet.create({
   },
 
   neighborhood: {
-    color: "#77727C",
+    color: COLORS.muted,
     fontSize: 9,
     letterSpacing: 2,
     marginTop: 7,
   },
 
   priceText: {
-    color: "#C9A45C",
+    color: COLORS.gold,
     fontSize: 10,
     letterSpacing: 1,
     marginTop: 6,
   },
 
   arrow: {
-    color: "#C9A45C",
+    color: COLORS.gold,
     fontSize: 23,
     fontWeight: "200",
   },
@@ -1122,7 +1083,7 @@ const styles = StyleSheet.create({
   },
 
   loadingText: {
-    color: "#77727C",
+    color: COLORS.muted,
     fontSize: 9,
     letterSpacing: 2,
     marginTop: 12,
@@ -1137,13 +1098,13 @@ const styles = StyleSheet.create({
   },
 
   emptyTitle: {
-    color: "#C9A45C",
+    color: COLORS.gold,
     fontSize: 12,
     letterSpacing: 3,
   },
 
   emptyText: {
-    color: "#77727C",
+    color: COLORS.muted,
     fontSize: 14,
     textAlign: "center",
     marginTop: 11,
@@ -1153,14 +1114,14 @@ const styles = StyleSheet.create({
 
   emptyClear: {
     borderWidth: 1,
-    borderColor: "#C9A45C",
+    borderColor: COLORS.gold,
     paddingHorizontal: 18,
     paddingVertical: 10,
     marginTop: 18,
   },
 
   emptyClearText: {
-    color: "#C9A45C",
+    color: COLORS.gold,
     fontSize: 9,
     letterSpacing: 1.7,
   },
@@ -1176,14 +1137,14 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    height: 78,
-    backgroundColor: "#0B0A0F",
+    height: 70,
+    backgroundColor: COLORS.background,
     borderTopWidth: 1,
-    borderTopColor: "#29242F",
+    borderTopColor: COLORS.border,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-around",
-    paddingBottom: 5,
+    paddingBottom: 0,
   },
 
   navItem: {
@@ -1199,32 +1160,22 @@ const styles = StyleSheet.create({
     top: 0,
     width: 28,
     height: 1,
-    backgroundColor: "#C9A45C",
-  },
-
-  navIcon: {
-    color: "#77727C",
-    fontSize: 23,
-    lineHeight: 25,
-  },
-
-  navIconActive: {
-    color: "#C9A45C",
-    fontSize: 23,
-    lineHeight: 25,
+    backgroundColor: COLORS.gold,
   },
 
   navText: {
-    color: "#77727C",
+    color: COLORS.muted,
     fontSize: 8,
     letterSpacing: 1.5,
     marginTop: 5,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   navTextActive: {
-    color: "#C9A45C",
+    color: COLORS.gold,
     fontSize: 8,
     letterSpacing: 1.5,
     marginTop: 5,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 });

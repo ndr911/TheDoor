@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
@@ -13,6 +14,18 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase } from "../../lib/supabase";
 
 const venuePlaceholder = require("../../assets/the_door_venue_placeholder.jpg");
+
+const COLORS = {
+  background: "#0B0A0F",
+  card: "#17141C",
+  cardBorder: "#29242F",
+  gold: "#C9A45C",
+  goldBright: "#D9B65E",
+  text: "#F5F1E8",
+  muted: "#96919B",
+  subtle: "#77727C",
+  white: "#FFFFFF",
+};
 
 type Venue = {
   id: string;
@@ -109,33 +122,26 @@ export default function SavedScreen() {
         contentContainerStyle={styles.scrollContent}
       >
         {/* HEADER */}
-
         <Text style={styles.eyebrow}>THE DOOR</Text>
-
         <Text style={styles.title}>SAVED</Text>
-
         <Text style={styles.subtitle}>
           Your favorite spots, all in one place.
         </Text>
 
         {/* LOADING */}
-
         {loading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="small" color="#C9A45C" />
-
+            <ActivityIndicator size="small" color={COLORS.gold} />
             <Text style={styles.loadingText}>OPENING THE DOOR...</Text>
           </View>
         ) : savedVenues.length === 0 ? (
           /* EMPTY STATE */
-
           <View style={styles.emptyCard}>
             <View style={styles.emptyIconCircle}>
               <Text style={styles.emptyIcon}>♡</Text>
             </View>
 
             <Text style={styles.emptyTitle}>NOTHING SAVED YET</Text>
-
             <Text style={styles.emptyText}>
               Explore hidden gems and save the places you want to visit.
             </Text>
@@ -152,12 +158,10 @@ export default function SavedScreen() {
           </View>
         ) : (
           /* SAVED VENUES */
-
           <View style={styles.venueList}>
             <View style={styles.sectionHeader}>
               <View>
                 <Text style={styles.sectionTitle}>YOUR SPOTS</Text>
-
                 <View style={styles.sectionAccent} />
               </View>
 
@@ -189,7 +193,6 @@ export default function SavedScreen() {
                   }
                 >
                   {/* IMAGE */}
-
                   <View style={styles.imageContainer}>
                     <Image
                       source={
@@ -200,17 +203,12 @@ export default function SavedScreen() {
                       style={styles.venueImage}
                       resizeMode="cover"
                     />
-
-                    {/* IMAGE OVERLAY */}
-
                     <View style={styles.imageOverlay} />
 
                     {/* RATING */}
-
                     {venue.rating !== null && (
                       <View style={styles.imageRating}>
                         <Text style={styles.star}>★</Text>
-
                         <Text style={styles.ratingText}>
                           {Number(venue.rating).toFixed(1)}
                         </Text>
@@ -219,7 +217,6 @@ export default function SavedScreen() {
                   </View>
 
                   {/* VENUE INFO */}
-
                   <View style={styles.venueInfo}>
                     <View style={styles.venueMain}>
                       <Text style={styles.venueName} numberOfLines={1}>
@@ -234,7 +231,6 @@ export default function SavedScreen() {
                         {price && (
                           <>
                             <Text style={styles.metaDivider}>•</Text>
-
                             <Text style={styles.price}>{price}</Text>
                           </>
                         )}
@@ -250,27 +246,72 @@ export default function SavedScreen() {
             })}
           </View>
         )}
+
+        {/* BOTTOM SPACING FOR NAV BAR */}
+        <View style={{ height: 120 }} />
       </ScrollView>
+
+      {/* BOTTOM NAVIGATION */}
+      <View style={styles.bottomNav}>
+        <NavItem icon="home" label="HOME" onPress={() => router.push("/")} />
+        <NavItem
+          icon="search"
+          label="EXPLORE"
+          onPress={() => router.push("/explore")}
+        />
+        <NavItem icon="heart" label="SAVED" active onPress={() => {}} />
+        <NavItem
+          icon="person-outline"
+          label="PROFILE"
+          onPress={() => router.push("/profile")}
+        />
+      </View>
     </SafeAreaView>
+  );
+}
+
+function NavItem({
+  icon,
+  label,
+  active = false,
+  onPress,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  active?: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      style={({ pressed }) => [styles.navItem, pressed && styles.navPressed]}
+      onPress={onPress}
+    >
+      <Ionicons
+        name={icon}
+        size={23}
+        color={active ? COLORS.gold : COLORS.muted}
+      />
+      <Text style={[styles.navLabel, active && styles.navActive]}>{label}</Text>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0B0A0F",
+    backgroundColor: COLORS.background,
   },
 
   scrollContent: {
     paddingHorizontal: 24,
     paddingTop: 24,
-    paddingBottom: 120,
+    paddingBottom: 30,
   },
 
   /* HEADER */
 
   eyebrow: {
-    color: "#C9A45C",
+    color: COLORS.gold,
     fontSize: 10,
     letterSpacing: 3,
     marginBottom: 10,
@@ -278,14 +319,14 @@ const styles = StyleSheet.create({
   },
 
   title: {
-    color: "#F5F1E8",
+    color: COLORS.text,
     fontSize: 38,
     letterSpacing: 3,
     fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   subtitle: {
-    color: "#96919B",
+    color: COLORS.muted,
     fontSize: 14,
     lineHeight: 20,
     marginTop: 8,
@@ -300,7 +341,7 @@ const styles = StyleSheet.create({
   },
 
   loadingText: {
-    color: "#77727C",
+    color: COLORS.subtle,
     fontSize: 9,
     letterSpacing: 1.5,
     marginTop: 12,
@@ -311,9 +352,9 @@ const styles = StyleSheet.create({
 
   emptyCard: {
     marginTop: 38,
-    backgroundColor: "#17141C",
+    backgroundColor: COLORS.card,
     borderWidth: 1,
-    borderColor: "#29242F",
+    borderColor: COLORS.cardBorder,
     borderRadius: 18,
     paddingHorizontal: 24,
     paddingVertical: 42,
@@ -326,27 +367,27 @@ const styles = StyleSheet.create({
     borderRadius: 29,
     backgroundColor: "#1D1921",
     borderWidth: 1,
-    borderColor: "#C9A45C",
+    borderColor: COLORS.gold,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 20,
   },
 
   emptyIcon: {
-    color: "#C9A45C",
+    color: COLORS.gold,
     fontSize: 30,
     marginTop: -2,
   },
 
   emptyTitle: {
-    color: "#F5F1E8",
+    color: COLORS.text,
     fontSize: 15,
     letterSpacing: 2.5,
     fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   emptyText: {
-    color: "#77727C",
+    color: COLORS.subtle,
     fontSize: 13,
     lineHeight: 20,
     textAlign: "center",
@@ -358,7 +399,7 @@ const styles = StyleSheet.create({
   exploreButton: {
     height: 52,
     width: "100%",
-    backgroundColor: "#C9A45C",
+    backgroundColor: COLORS.gold,
     borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
@@ -366,7 +407,7 @@ const styles = StyleSheet.create({
   },
 
   exploreButtonText: {
-    color: "#0B0A0F",
+    color: COLORS.background,
     fontSize: 10,
     letterSpacing: 2,
     fontFamily: "CormorantGaramond_600SemiBold",
@@ -386,7 +427,7 @@ const styles = StyleSheet.create({
   },
 
   sectionTitle: {
-    color: "#F5F1E8",
+    color: COLORS.text,
     fontSize: 16,
     letterSpacing: 2.5,
     fontFamily: "CormorantGaramond_600SemiBold",
@@ -395,7 +436,7 @@ const styles = StyleSheet.create({
   sectionAccent: {
     width: 24,
     height: 1,
-    backgroundColor: "#C9A45C",
+    backgroundColor: COLORS.gold,
     marginTop: 6,
   },
 
@@ -406,13 +447,13 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     backgroundColor: "#1A1710",
     borderWidth: 1,
-    borderColor: "#C9A45C",
+    borderColor: COLORS.gold,
     alignItems: "center",
     justifyContent: "center",
   },
 
   sectionCount: {
-    color: "#D9B65E",
+    color: COLORS.goldBright,
     fontSize: 13,
     fontFamily: "CormorantGaramond_600SemiBold",
   },
@@ -420,9 +461,9 @@ const styles = StyleSheet.create({
   /* VENUE CARD */
 
   venueCard: {
-    backgroundColor: "#17141C",
+    backgroundColor: COLORS.card,
     borderWidth: 1,
-    borderColor: "#29242F",
+    borderColor: COLORS.cardBorder,
     borderRadius: 16,
     marginBottom: 16,
     overflow: "hidden",
@@ -466,20 +507,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "rgba(11, 10, 15, 0.88)",
     borderWidth: 1,
-    borderColor: "#C9A45C",
+    borderColor: COLORS.gold,
     borderRadius: 12,
     paddingHorizontal: 11,
     paddingVertical: 6,
   },
 
   star: {
-    color: "#D9B65E",
+    color: COLORS.goldBright,
     fontSize: 18,
     fontWeight: "600",
   },
 
   ratingText: {
-    color: "#F5F1E8",
+    color: COLORS.text,
     fontSize: 16,
     fontWeight: "600",
     marginLeft: 5,
@@ -501,7 +542,7 @@ const styles = StyleSheet.create({
   },
 
   venueName: {
-    color: "#F5F1E8",
+    color: COLORS.text,
     fontSize: 17,
     letterSpacing: 1.1,
     fontFamily: "CormorantGaramond_600SemiBold",
@@ -514,7 +555,7 @@ const styles = StyleSheet.create({
   },
 
   neighborhood: {
-    color: "#77727C",
+    color: COLORS.subtle,
     fontSize: 10,
     letterSpacing: 1.3,
     fontFamily: "CormorantGaramond_600SemiBold",
@@ -527,7 +568,7 @@ const styles = StyleSheet.create({
   },
 
   price: {
-    color: "#C9A45C",
+    color: COLORS.gold,
     fontSize: 11,
     letterSpacing: 1,
     fontFamily: "CormorantGaramond_600SemiBold",
@@ -539,23 +580,62 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: "#1D1921",
     borderWidth: 1,
-    borderColor: "#29242F",
+    borderColor: COLORS.cardBorder,
     alignItems: "center",
     justifyContent: "center",
     marginLeft: 12,
   },
 
   chevron: {
-    color: "#C9A45C",
+    color: COLORS.gold,
     fontSize: 21,
     lineHeight: 22,
     marginTop: -2,
   },
 
-  /* BUTTON PRESS */
-
   buttonPressed: {
     opacity: 0.82,
     transform: [{ scale: 0.985 }],
+  },
+
+  /* BOTTOM NAV */
+
+  bottomNav: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 82,
+    backgroundColor: "#100E14",
+    borderTopWidth: 1,
+    borderTopColor: COLORS.cardBorder,
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "center",
+    paddingBottom: 8,
+  },
+
+  navItem: {
+    alignItems: "center",
+    justifyContent: "center",
+    width: 80,
+    height: 58,
+  },
+
+  navPressed: {
+    opacity: 0.65,
+    transform: [{ scale: 0.94 }],
+  },
+
+  navLabel: {
+    color: COLORS.muted,
+    fontSize: 9,
+    letterSpacing: 1.3,
+    marginTop: 5,
+    fontFamily: "CormorantGaramond_600SemiBold",
+  },
+
+  navActive: {
+    color: COLORS.gold,
   },
 });
