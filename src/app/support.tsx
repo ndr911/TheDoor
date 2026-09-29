@@ -1,7 +1,7 @@
 import {
-    CormorantGaramond_500Medium,
-    CormorantGaramond_600SemiBold,
-    useFonts,
+  CormorantGaramond_500Medium,
+  CormorantGaramond_600SemiBold,
+  useFonts,
 } from "@expo-google-fonts/cormorant-garamond";
 import { router } from "expo-router";
 import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
@@ -32,13 +32,13 @@ export default function HelpSupportScreen() {
 
         <View style={styles.header}>
           <Pressable style={styles.backButton} onPress={() => router.back()}>
-            <Text style={styles.backArrow}>‹</Text>
+            <Text style={styles.backArrow}>‹ BACK</Text>
           </Pressable>
 
           <View style={styles.headerContent}>
             <Text style={styles.eyebrow}>THE DOOR</Text>
 
-            <Text style={styles.title}>HELP & SUPPORT</Text>
+            <Text style={styles.title}>SUPPORT</Text>
 
             <View style={styles.goldLine} />
           </View>
@@ -89,16 +89,17 @@ const styles = StyleSheet.create({
   },
 
   backButton: {
-    width: 42,
+    width: 80,
     height: 42,
     justifyContent: "center",
+    marginRight: 8,
   },
 
   backArrow: {
-    color: "#C9A45C",
-    fontSize: 38,
-    lineHeight: 38,
-    fontFamily: "CormorantGaramond_500Medium",
+    color: "#FFFFFF",
+    fontSize: 14,
+    letterSpacing: 3,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   headerContent: {
@@ -110,6 +111,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 4,
     marginBottom: 10,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   title: {
@@ -163,6 +165,7 @@ const styles = StyleSheet.create({
     fontSize: 9,
     letterSpacing: 2.5,
     marginBottom: 8,
+    fontFamily: "CormorantGaramond_600SemiBold",
   },
 
   email: {

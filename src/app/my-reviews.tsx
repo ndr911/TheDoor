@@ -1,19 +1,19 @@
 import {
-    CormorantGaramond_500Medium,
-    CormorantGaramond_600SemiBold,
-    useFonts,
+  CormorantGaramond_500Medium,
+  CormorantGaramond_600SemiBold,
+  useFonts,
 } from "@expo-google-fonts/cormorant-garamond";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase } from "../../lib/supabase";
@@ -169,7 +169,9 @@ export default function MyReviewsScreen() {
             <Ionicons name="chevron-back" size={25} color={COLORS.text} />
             <Text style={styles.backText}>BACK</Text>
           </Pressable>
+
           <Text style={styles.headerTitle}>MY REVIEWS</Text>
+
           <View style={styles.headerSpacer} />
         </View>
 
@@ -179,6 +181,7 @@ export default function MyReviewsScreen() {
         >
           <View style={styles.intro}>
             <Text style={styles.eyebrow}>YOUR EXPERIENCES</Text>
+
             <View style={styles.titleRow}>
               <Text style={styles.titleNumber}>{reviews.length}</Text>
 
@@ -186,6 +189,7 @@ export default function MyReviewsScreen() {
                 {reviews.length === 1 ? "REVIEW" : "REVIEWS"}
               </Text>
             </View>
+
             <View style={styles.goldLine} />
           </View>
 
@@ -194,11 +198,14 @@ export default function MyReviewsScreen() {
               <View style={styles.emptyIcon}>
                 <Ionicons name="create-outline" size={32} color={COLORS.gold} />
               </View>
+
               <Text style={styles.emptyTitle}>NO REVIEWS YET</Text>
+
               <Text style={styles.emptyText}>
                 Your reviews will appear here after you share your experience at
                 a venue.
               </Text>
+
               <Pressable
                 style={({ pressed }) => [
                   styles.exploreButton,
@@ -213,6 +220,7 @@ export default function MyReviewsScreen() {
             <View style={styles.reviewList}>
               {reviews.map((review) => {
                 const venue = review.venue;
+
                 const location = [venue?.neighborhood, venue?.city]
                   .filter(Boolean)
                   .join(" · ");
@@ -231,6 +239,7 @@ export default function MyReviewsScreen() {
                         <Text style={styles.venueName} numberOfLines={2}>
                           {venue?.name || "UNKNOWN VENUE"}
                         </Text>
+
                         {location ? (
                           <Text style={styles.location} numberOfLines={1}>
                             {location.toUpperCase()}
@@ -242,6 +251,7 @@ export default function MyReviewsScreen() {
                         <Text style={styles.stars}>
                           {renderStars(review.rating)}
                         </Text>
+
                         <Text style={styles.ratingNumber}>
                           {Number(review.rating).toFixed(1)}
                         </Text>
@@ -262,8 +272,10 @@ export default function MyReviewsScreen() {
                       <Text style={styles.date}>
                         {formatDate(review.created_at).toUpperCase()}
                       </Text>
+
                       <View style={styles.viewVenue}>
                         <Text style={styles.viewVenueText}>VIEW VENUE</Text>
+
                         <Ionicons
                           name="chevron-forward"
                           size={15}
@@ -279,46 +291,21 @@ export default function MyReviewsScreen() {
 
           <View style={{ height: 30 }} />
         </ScrollView>
-
-        <View style={styles.bottomNav}>
-          <Pressable
-            style={styles.navItem}
-            onPress={() => router.push("/home")}
-          >
-            <Text style={styles.navIcon}>⌂</Text>
-            <Text style={styles.navText}>HOME</Text>
-          </Pressable>
-          <Pressable
-            style={styles.navItem}
-            onPress={() => router.push("/explore")}
-          >
-            <Text style={styles.navIcon}>⌕</Text>
-            <Text style={styles.navText}>EXPLORE</Text>
-          </Pressable>
-          <Pressable
-            style={styles.navItem}
-            onPress={() => router.push("/saved")}
-          >
-            <Text style={styles.navIcon}>♡</Text>
-            <Text style={styles.navText}>SAVED</Text>
-          </Pressable>
-          <Pressable
-            style={styles.navItem}
-            onPress={() => router.push("/profile")}
-          >
-            <View style={styles.activeNavIndicator} />
-            <Text style={styles.navIconActive}>○</Text>
-            <Text style={styles.navTextActive}>PROFILE</Text>
-          </Pressable>
-        </View>
       </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-  screen: { flex: 1 },
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+
+  screen: {
+    flex: 1,
+  },
+
   header: {
     height: 70,
     flexDirection: "row",
@@ -328,7 +315,13 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: COLORS.cardBorder,
   },
-  backButton: { flexDirection: "row", alignItems: "center", width: 90 },
+
+  backButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    width: 90,
+  },
+
   backText: {
     color: COLORS.text,
     fontSize: 10,
@@ -336,14 +329,23 @@ const styles = StyleSheet.create({
     marginLeft: 2,
     fontFamily: "CormorantGaramond_600SemiBold",
   },
+
   headerTitle: {
     color: COLORS.text,
     fontSize: 16,
     letterSpacing: 3,
     fontFamily: "CormorantGaramond_600SemiBold",
   },
-  headerSpacer: { width: 90 },
-  scrollContent: { paddingHorizontal: 24, paddingBottom: 120 },
+
+  headerSpacer: {
+    width: 90,
+  },
+
+  scrollContent: {
+    paddingHorizontal: 24,
+    paddingBottom: 30,
+  },
+
   intro: {
     paddingTop: 28,
     paddingBottom: 22,
@@ -379,6 +381,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     fontFamily: "CormorantGaramond_600SemiBold",
   },
+
   title: {
     color: COLORS.text,
     fontSize: 32,
@@ -388,13 +391,18 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
     textAlignVertical: "center",
   },
+
   goldLine: {
     width: 38,
     height: 1,
     backgroundColor: COLORS.gold,
     marginTop: 12,
   },
-  reviewList: { gap: 14 },
+
+  reviewList: {
+    gap: 14,
+  },
+
   reviewCard: {
     backgroundColor: COLORS.card,
     borderWidth: 1,
@@ -402,13 +410,24 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 18,
   },
-  cardPressed: { opacity: 0.82, transform: [{ scale: 0.99 }] },
+
+  cardPressed: {
+    opacity: 0.82,
+    transform: [{ scale: 0.99 }],
+  },
+
   cardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
   },
-  venueInfo: { flex: 1, paddingRight: 14, minWidth: 0 },
+
+  venueInfo: {
+    flex: 1,
+    paddingRight: 14,
+    minWidth: 0,
+  },
+
   venueName: {
     color: COLORS.text,
     fontSize: 21,
@@ -417,6 +436,7 @@ const styles = StyleSheet.create({
     fontFamily: "CormorantGaramond_600SemiBold",
     flexShrink: 1,
   },
+
   location: {
     color: COLORS.muted,
     fontSize: 9,
@@ -424,12 +444,17 @@ const styles = StyleSheet.create({
     marginTop: 6,
     fontFamily: "CormorantGaramond_600SemiBold",
   },
-  ratingContainer: { alignItems: "flex-end" },
+
+  ratingContainer: {
+    alignItems: "flex-end",
+  },
+
   stars: {
     color: COLORS.goldBright,
     fontSize: 13,
     letterSpacing: 1,
   },
+
   ratingNumber: {
     color: COLORS.text,
     fontSize: 21,
@@ -437,36 +462,46 @@ const styles = StyleSheet.create({
     marginTop: 2,
     fontFamily: "CormorantGaramond_600SemiBold",
   },
+
   divider: {
     height: 1,
     backgroundColor: COLORS.cardBorder,
     marginVertical: 15,
   },
+
   reviewText: {
     color: "#E5DED4",
     fontSize: 17,
     lineHeight: 24,
     fontFamily: "CormorantGaramond_500Medium",
   },
+
   noReview: {
     color: COLORS.subtle,
     fontSize: 10,
     letterSpacing: 1.5,
     fontFamily: "CormorantGaramond_600SemiBold",
   },
+
   cardFooter: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginTop: 18,
   },
+
   date: {
     color: COLORS.subtle,
     fontSize: 9,
     letterSpacing: 1.5,
     fontFamily: "CormorantGaramond_600SemiBold",
   },
-  viewVenue: { flexDirection: "row", alignItems: "center" },
+
+  viewVenue: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
   viewVenueText: {
     color: COLORS.gold,
     fontSize: 9,
@@ -474,11 +509,13 @@ const styles = StyleSheet.create({
     marginRight: 3,
     fontFamily: "CormorantGaramond_600SemiBold",
   },
+
   empty: {
     alignItems: "center",
     paddingTop: 60,
     paddingHorizontal: 24,
   },
+
   emptyIcon: {
     width: 68,
     height: 68,
@@ -489,6 +526,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+
   emptyTitle: {
     color: COLORS.text,
     fontSize: 20,
@@ -496,6 +534,7 @@ const styles = StyleSheet.create({
     marginTop: 18,
     fontFamily: "CormorantGaramond_600SemiBold",
   },
+
   emptyText: {
     color: COLORS.muted,
     fontSize: 15,
@@ -504,6 +543,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontFamily: "CormorantGaramond_500Medium",
   },
+
   exploreButton: {
     height: 52,
     paddingHorizontal: 25,
@@ -513,17 +553,20 @@ const styles = StyleSheet.create({
     marginTop: 25,
     borderRadius: 12,
   },
+
   exploreButtonText: {
     color: COLORS.background,
     fontSize: 10,
     letterSpacing: 2,
     fontFamily: "CormorantGaramond_600SemiBold",
   },
+
   loadingContainer: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
   },
+
   loadingText: {
     color: COLORS.gold,
     fontSize: 11,
@@ -531,49 +574,8 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontFamily: "CormorantGaramond_600SemiBold",
   },
-  pressed: { opacity: 0.7 },
-  bottomNav: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: 82,
-    backgroundColor: "#111016",
-    borderTopWidth: 1,
-    borderTopColor: COLORS.cardBorder,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-around",
-    paddingBottom: 8,
-  },
-  navItem: {
-    flex: 1,
-    height: 72,
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-  },
-  navIcon: { color: COLORS.muted, fontSize: 23, lineHeight: 25 },
-  navIconActive: { color: COLORS.gold, fontSize: 23, lineHeight: 25 },
-  navText: {
-    color: COLORS.muted,
-    fontSize: 8,
-    letterSpacing: 1.5,
-    marginTop: 4,
-    fontFamily: "CormorantGaramond_600SemiBold",
-  },
-  navTextActive: {
-    color: COLORS.gold,
-    fontSize: 8,
-    letterSpacing: 1.5,
-    marginTop: 4,
-    fontFamily: "CormorantGaramond_600SemiBold",
-  },
-  activeNavIndicator: {
-    position: "absolute",
-    top: 0,
-    width: 32,
-    height: 2,
-    backgroundColor: COLORS.gold,
+
+  pressed: {
+    opacity: 0.7,
   },
 });
