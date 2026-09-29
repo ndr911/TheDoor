@@ -44,6 +44,7 @@ type Review = {
   review_text: string | null;
   created_at: string;
   user_id: string;
+  reviewer_name?: string | null;
 };
 
 export default function VenueScreen() {
@@ -104,6 +105,8 @@ export default function VenueScreen() {
       setVenue(venueData);
       setImageFailed(false);
 
+      // Load reviews first. We fetch reviewer names separately instead of
+      // relying on a Supabase relationship between reviews and profiles.
       const { data: reviewData, error: reviewError } = await supabase
         .from("reviews")
         .select("id, rating, review_text, created_at, user_id")
@@ -113,10 +116,45 @@ export default function VenueScreen() {
         });
 
       if (reviewError) {
-        console.error("Unable to load reviews:", reviewError);
+        throw reviewError;
       }
 
-      setReviews(reviewData ?? []);
+      const rawReviews = reviewData ?? [];
+
+      const reviewerIds = [
+        ...new Set(rawReviews.map((review) => review.user_id)),
+      ];
+
+      let profilesById: Record<string, { name: string | null }> = {};
+
+      if (reviewerIds.length > 0) {
+        const { data: profileData, error: profileError } = await supabase
+          .from("profiles")
+          .select("id, name")
+          .in("id", reviewerIds);
+
+        if (profileError) {
+          console.error("Unable to load reviewer profiles:", profileError);
+        } else {
+          profilesById = Object.fromEntries(
+            (profileData ?? []).map((profile) => [
+              profile.id,
+              { name: profile.name },
+            ]),
+          );
+        }
+      }
+
+      const normalizedReviews: Review[] = rawReviews.map((review) => ({
+        id: review.id,
+        rating: Number(review.rating),
+        review_text: review.review_text,
+        created_at: review.created_at,
+        user_id: review.user_id,
+        reviewer_name: profilesById[review.user_id]?.name?.trim() || "MEMBER",
+      }));
+
+      setReviews(normalizedReviews);
 
       if (user) {
         const { data: savedData, error: savedError } = await supabase
@@ -265,13 +303,6 @@ export default function VenueScreen() {
     );
   }
 
-  /*
-   * IMAGE LOGIC
-   *
-   * 1. If Supabase has an image_url, use it.
-   * 2. If there is no image_url, use the Door placeholder.
-   * 3. If the Supabase image fails, use the Door placeholder.
-   */
   const venueImage =
     venue.image_url?.trim() && !imageFailed
       ? { uri: venue.image_url }
@@ -283,10 +314,6 @@ export default function VenueScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* =====================================================
-            HERO
-        ====================================================== */}
-
         <View style={styles.hero}>
           <ImageBackground
             source={venueImage}
@@ -318,24 +345,12 @@ export default function VenueScreen() {
           </ImageBackground>
         </View>
 
-        {/* =====================================================
-            CONTENT
-        ====================================================== */}
-
         <View style={styles.content}>
-          {/* DESCRIPTION */}
-
           {venue.description && (
             <Text style={styles.description}>{venue.description}</Text>
           )}
 
-          {/* ===================================================
-              LOCATION / PRICE / PASSWORD
-          ==================================================== */}
-
           <View style={styles.infoRow}>
-            {/* LOCATION */}
-
             <View style={styles.infoColumn}>
               <Ionicons
                 name="location"
@@ -364,8 +379,6 @@ export default function VenueScreen() {
 
             <View style={styles.verticalDivider} />
 
-            {/* PRICE */}
-
             <View style={styles.infoColumn}>
               <Ionicons
                 name="cash-outline"
@@ -383,8 +396,6 @@ export default function VenueScreen() {
 
             <View style={styles.verticalDivider} />
 
-            {/* PASSWORD */}
-
             <View style={styles.infoColumn}>
               <Ionicons
                 name="key-outline"
@@ -400,10 +411,6 @@ export default function VenueScreen() {
               </Text>
             </View>
           </View>
-
-          {/* ===================================================
-              DIRECTIONS
-          ==================================================== */}
 
           <Pressable
             onPress={getDirections}
@@ -450,17 +457,11 @@ export default function VenueScreen() {
             </Pressable>
           )}
 
-          {/* ===================================================
-              REVIEWS HEADER
-          ==================================================== */}
-
           <View style={styles.reviewHeader}>
             <Text style={styles.reviewTitle}>REVIEWS</Text>
 
             <Text style={styles.reviewCount}>{reviews.length}</Text>
           </View>
-
-          {/* WRITE REVIEW */}
 
           <View style={styles.reviewActionRow}>
             <View />
@@ -483,10 +484,6 @@ export default function VenueScreen() {
               <Text style={styles.writeReviewText}>WRITE A REVIEW</Text>
             </Pressable>
           </View>
-
-          {/* ===================================================
-              REVIEWS
-          ==================================================== */}
 
           {reviews.length === 0 ? (
             <View style={styles.emptyReviews}>
@@ -537,10 +534,6 @@ export default function VenueScreen() {
     </SafeAreaView>
   );
 }
-
-/* =============================================================
-   HERO TOP
-============================================================= */
 
 function HeroTop({
   saved,
@@ -611,10 +604,6 @@ function HeroTop({
   );
 }
 
-/* =============================================================
-   HERO INFORMATION
-============================================================= */
-
 function HeroInformation({
   venue,
   reviewCount,
@@ -646,12 +635,11 @@ function HeroInformation({
   );
 }
 
-/* =============================================================
-   REVIEW CARD
-============================================================= */
 function ReviewCard({ review }: { review: Review }) {
   const [expanded, setExpanded] = useState(false);
   const [isLongReview, setIsLongReview] = useState(false);
+
+  const reviewerName = review.reviewer_name?.trim() || "MEMBER";
 
   const date = new Date(review.created_at).toLocaleDateString("en-US", {
     month: "short",
@@ -659,13 +647,13 @@ function ReviewCard({ review }: { review: Review }) {
     year: "numeric",
   });
 
-  const stars = Math.max(0, Math.min(review.rating, 5));
+  const stars = Math.max(0, Math.min(Math.round(review.rating), 5));
 
   return (
     <View style={styles.reviewCard}>
       <View style={styles.reviewTop}>
         <View style={styles.reviewerInfo}>
-          <Text style={styles.reviewerName}>MEMBER</Text>
+          <Text style={styles.reviewerName}>{reviewerName.toUpperCase()}</Text>
 
           <Text style={styles.reviewDate}>{date.toUpperCase()}</Text>
         </View>
@@ -681,7 +669,6 @@ function ReviewCard({ review }: { review: Review }) {
 
       {review.review_text ? (
         <View style={styles.reviewTextContainer}>
-          {/* Invisible measurement copy */}
           <Text
             style={[styles.reviewComment, styles.reviewMeasurement]}
             onTextLayout={(event) => {
@@ -691,7 +678,6 @@ function ReviewCard({ review }: { review: Review }) {
             {review.review_text}
           </Text>
 
-          {/* Actual review shown to the user */}
           <Text
             style={styles.reviewComment}
             numberOfLines={expanded ? undefined : 3}
@@ -722,9 +708,6 @@ function ReviewCard({ review }: { review: Review }) {
     </View>
   );
 }
-/* =============================================================
-   STYLES
-============================================================= */
 
 const styles = StyleSheet.create({
   container: {
@@ -735,8 +718,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 60,
   },
-
-  /* HERO */
 
   hero: {
     width: "100%",
@@ -838,8 +819,6 @@ const styles = StyleSheet.create({
     letterSpacing: 3,
   },
 
-  /* CONTENT */
-
   content: {
     paddingHorizontal: 28,
   },
@@ -851,8 +830,6 @@ const styles = StyleSheet.create({
     marginTop: 30,
     fontFamily: "CormorantGaramond_500Medium",
   },
-
-  /* INFO */
 
   infoRow: {
     flexDirection: "row",
@@ -906,19 +883,16 @@ const styles = StyleSheet.create({
     fontFamily: "CormorantGaramond_500Medium",
   },
 
-  /* DIRECTIONS */
-
   directionsButton: {
     height: 64,
     borderWidth: 2,
     borderColor: "#D9B65E",
-    borderRadius: 14, // added
+    borderRadius: 14,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 25,
     marginTop: 10,
-
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -940,14 +914,11 @@ const styles = StyleSheet.create({
     opacity: 0.65,
   },
 
-  /* REVIEWS */
-
   reviewHeader: {
     borderTopWidth: 1,
     borderColor: "#29242F",
     marginTop: 42,
     paddingTop: 26,
-
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -974,15 +945,12 @@ const styles = StyleSheet.create({
   writeReviewButton: {
     width: "100%",
     height: 56,
-
     borderRadius: 14,
     borderWidth: 1,
     borderColor: "#C9A45C",
     backgroundColor: "#C9A45C",
-
     alignItems: "center",
     justifyContent: "center",
-
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -999,7 +967,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     letterSpacing: 2.5,
   },
-  /* REVIEW SCROLL */
 
   reviewScroll: {
     maxHeight: 390,
@@ -1008,8 +975,6 @@ const styles = StyleSheet.create({
   reviewScrollExpanded: {
     maxHeight: 450,
   },
-
-  /* REVIEW CARDS */
 
   reviewCard: {
     borderWidth: 1,
@@ -1103,8 +1068,6 @@ const styles = StyleSheet.create({
     fontFamily: "CormorantGaramond_500Medium",
   },
 
-  /* VIEW ALL REVIEWS */
-
   viewAllReviewsButton: {
     height: 52,
     borderWidth: 1,
@@ -1126,8 +1089,6 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
 
-  /* EMPTY REVIEWS */
-
   emptyReviews: {
     alignItems: "center",
     paddingVertical: 50,
@@ -1145,8 +1106,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontFamily: "CormorantGaramond_500Medium",
   },
-
-  /* LOADING */
 
   loading: {
     flex: 1,
@@ -1172,18 +1131,18 @@ const styles = StyleSheet.create({
     fontSize: 12,
     letterSpacing: 3,
   },
+
   reservationButton: {
     height: 64,
     borderWidth: 1,
     borderColor: "#C9A45C",
-    borderRadius: 14, // added
+    borderRadius: 14,
     backgroundColor: "#C9A45C",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 25,
     marginTop: 12,
-
     shadowColor: "#000",
     shadowOffset: {
       width: 0,

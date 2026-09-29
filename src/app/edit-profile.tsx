@@ -1,16 +1,16 @@
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase } from "../../lib/supabase";
@@ -319,9 +319,10 @@ const styles = StyleSheet.create({
   },
 
   backText: {
-    color: "#C9A45C",
-    fontSize: 11,
+    color: "#FFFFFF",
+    fontSize: 14,
     letterSpacing: 2.5,
+    marginLeft: 2,
     fontFamily: "CormorantGaramond_600SemiBold",
   },
 
